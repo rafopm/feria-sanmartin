@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+<title>Escáner - Feria San Martín</title>
+<style>
+:root{color-scheme:dark;font-family:'Segoe UI',Arial,sans-serif;background:#020617;color:#f8fafc}
+*{box-sizing:border-box} body{margin:0;min-height:100vh;display:flex;justify-content:center;padding:16px;background:radial-gradient(circle at top, rgba(56,189,248,0.14), transparent 28%),linear-gradient(180deg,#020617 0%,#070b1b 100%)}
+.page{width:min(100%,700px);display:grid;gap:18px;background:rgba(12,18,38,0.92);border:1px solid rgba(255,255,255,0.08);border-radius:28px;padding:24px}
+#reader{width:100%;min-height:52vh;border-radius:24px;overflow:hidden;background:#07101f;border:1px solid rgba(148,163,184,0.18)}
+#reader video{width:100%!important;height:100%!important;object-fit:cover}
+.status-text{margin-top:14px;padding:18px 20px;border-radius:18px;font-size:1rem;font-weight:700} .status-text.success{color:#0f172a;background:#a7f3d0} .status-text.error{color:#f8fafc;background:#dc2626} .status-text.pending{color:#fff;background:linear-gradient(135deg,rgba(56,189,248,0.95),rgba(14,165,233,0.9))}
+button{border:none;border-radius:16px;padding:14px 22px;font-weight:700;cursor:pointer} .primary{background:linear-gradient(135deg,#38bdf8,#0ea5e9);color:#020617} .secondary{background:rgba(255,255,255,0.08);color:#e2e8f0}
+</style>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/minified/html5-qrcode.min.js"></script>
+</head>
+<body>
+<main class="page">
+<h1 style="margin:0">Escáner de Ingreso</h1>
+<p style="color:#94a3b8">Apunta al QR. Al validar, se guarda en Sheets y activa el display de la tele automáticamente.</p>
+<section id="reader"></section>
+<div id="message" class="status-text pending">Iniciando cámara...</div>
+<div style="display:flex;gap:12px;margin-top:12px"><button id="restart" class="secondary">Reiniciar</button></div>
+<p style="color:#64748b;font-size:0.9rem">API: GitHub Pages → Google Sheets</p>
+</main>
+<script>
+const API_BASE = "https://script.google.com/a/macros/colegiosanmartin.edu.pe/s/AKfycbwNNJ4Pw0pQL5GzHRixn8S1mVcccnBQrIsgDuZNSxlCh9T5DxdolL9za7vwli3RIxyZdA/exec";
+let html5QrCode; let scanActive=false;
+const msgEl = document.getElementById('message');
+function updateStatus(t,c){ msgEl.textContent=t; msgEl.className='status-text '+c; }
+async function startScanner(){
+  updateStatus('Solicitando cámara...','pending');
+  html5QrCode = new Html5Qrcode('reader');
+  try{
+    const cams = await Html5Qrcode.getCameras();
+    const camId = cams.length? cams[0].id : {facingMode:{ideal:"environment"}};
+    await html5QrCode.start(camId, {fps:15, qrbox:{width:250,height:250}}, onScanSuccess);
+    updateStatus('Cámara activa. Apunta al QR','pending');
+  }catch(err){
+    console.error(err);
+    updateStatus('Error cámara: '+err.name+'. Usa HTTPS y permite cámara.','error');
+  }
+}
+async function onScanSuccess(decoded){
+  if(!decoded) return;
+  updateStatus('QR: '+decoded+' - Verificando en Sheets...','pending');
+  try{ await html5QrCode.pause(); }catch(e){}
+  try{
+    const r = await fetch(`${API_BASE}?action=check&id=${encodeURIComponent(decoded.trim())}`);
+    const res = await r.json();
+    if(res.status==='OK'){ updateStatus('✅ INGRESO: '+res.data.nombres+' '+res.data.apellidos,'success'); }
+    else if(res.status==='DUPLICADO'){ updateStatus('⚠️ QR YA USADO: '+res.data.nombres,'error'); }
+    else{ updateStatus('🚫 INVITACIÓN NO VÁLIDA','error'); }
+  }catch(e){
+    updateStatus('Error de conexión con Sheets: '+e.message,'error');
+  }
+  setTimeout(()=>{ try{ html5QrCode.resume(); updateStatus('Cámara activa. Apunta al siguiente QR','pending'); }catch(e){} }, 3000);
+}
+document.getElementById('restart').addEventListener('click', ()=>{ try{html5QrCode.stop()}catch(e){}; startScanner(); });
+window.addEventListener('load', startScanner);
+</script>
+</body>
+</html>
