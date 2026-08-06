@@ -3,69 +3,64 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Registro Feria - San Martín</title>
+<title>Registro de Invitados</title>
 <style>
-:root{color-scheme:dark;font-family:'Inter','Segoe UI',Arial,sans-serif;background:radial-gradient(circle at top left, rgba(14,165,233,0.18), transparent 24%),radial-gradient(circle at bottom right, rgba(168,85,247,0.14), transparent 22%),linear-gradient(180deg, #020617 0%, #090b16 100%);color:#e2e8f0}
+:root{color-scheme:dark;font-family:'Inter',Arial,sans-serif;background:radial-gradient(circle at top left, rgba(14,165,233,0.18), transparent 24%),linear-gradient(180deg, #020617 0%, #090b16 100%);color:#e2e8f0}
 *{box-sizing:border-box} body{margin:0;min-height:100vh;display:flex;justify-content:center;align-items:center;padding:24px}
-.container{width:min(100%,960px);background:rgba(9,14,28,0.95);border:1px solid rgba(148,163,184,0.12);border-radius:28px;box-shadow:0 32px 80px rgba(0,0,0,0.35);padding:36px}
-h1{margin:0 0 8px;font-size:clamp(2rem,3vw,3rem);letter-spacing:0.08em} p.subtitle{margin:0 0 28px;color:#94a3b8;line-height:1.7}
-form{display:grid;gap:18px} .grid-two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
-label{display:flex;flex-direction:column;gap:8px;font-size:0.94rem;color:#cbd5e1}
-input{border:1px solid rgba(148,163,184,0.18);border-radius:16px;padding:14px 16px;background:rgba(15,23,42,0.9);color:#f8fafc;font-size:1rem}
-button{width:fit-content;border:none;border-radius:18px;padding:16px 28px;font-size:1rem;font-weight:700;background:linear-gradient(135deg,#38bdf8,#0ea5e9);color:#020617;cursor:pointer}
-.status{margin-top:14px;padding:16px 18px;border-radius:18px;font-size:0.98rem;display:none} .status.success{display:block;background:#0f172a;border:1px solid #34d399;color:#bbf7d0} .status.error{display:block;background:#0f172a;border:1px solid #f87171;color:#fecaca} .status.loading{display:block;background:#0f172a;border:1px solid #38bdf8;color:#bfdbfe}
+.container{width:min(100%,960px);background:rgba(9,14,28,0.95);border:1px solid rgba(148,163,184,0.12);border-radius:28px;padding:36px}
+.grid-two{display:grid;grid-template-columns:repeat(2,1fr);gap:18px} label{display:flex;flex-direction:column;gap:8px;color:#cbd5e1} input,select{border:1px solid rgba(148,163,184,0.18);border-radius:16px;padding:14px 16px;background:rgba(15,23,42,0.9);color:#f8fafc}
+button{border:none;border-radius:18px;padding:16px 28px;font-weight:700;background:linear-gradient(135deg,#38bdf8,#0ea5e9);color:#020617;cursor:pointer}
+.status{margin-top:14px;padding:16px;border-radius:18px;display:none} .success{display:block;border:1px solid #34d399;color:#bbf7d0} .error{display:block;border:1px solid #f87171;color:#fecaca} .loading{display:block;border:1px solid #38bdf8;color:#bfdbfe} .warning{display:block;border:1px solid #fbbf24;color:#fef3c7}
+.event-card{background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.2);border-radius:16px;padding:16px;margin-bottom:12px}
 @media(max-width:780px){.grid-two{grid-template-columns:1fr}}
 </style>
+<script src="config.js"></script>
 </head>
 <body>
 <div class="container">
 <h1>Registro de Invitados</h1>
-<p class="subtitle">Completa tus datos. Recibirás tu QR por correo y al ingresar activarás la pantalla sorpresa de la feria tecnológica.</p>
-<form id="registrationForm">
+<div id="eventInfo"></div>
+<p id="subtitle">Cargando eventos...</p>
+<form id="registrationForm" style="display:none">
+<label>Evento<select id="eventoSelect" required></select></label>
 <div class="grid-two">
-<label>Nombres del asistente<input type="text" id="nombres" required placeholder="Ej: María Fernanda"></label>
-<label>Apellidos del asistente<input type="text" id="apellidos" required placeholder="Ej: López García"></label>
+<label>Nombres<input type="text" id="nombres" required></label>
+<label>Apellidos<input type="text" id="apellidos" required></label>
 </div>
 <div class="grid-two">
-<label>Nombre completo del Estudiante<input type="text" id="nombreEstudiante" required placeholder="Ej: Juan López - Alumno a quien viene a ver"></label>
-<label>Grado y Sección del Estudiante<input type="text" id="gradoSeccion" required placeholder="Ej: 3° A"></label>
+<label>Nombre Estudiante<input type="text" id="nombreEstudiante" required></label>
+<label>Grado y Sección<input type="text" id="gradoSeccion" required></label>
 </div>
 <div class="grid-two">
-<label>Parentesco o Vínculo con el estudiante<input type="text" id="parentesco" required placeholder="Ej: Mamá, Papá, Tío"></label>
-<label>Correo Electrónico<input type="email" id="email" required placeholder="Aquí llegará tu QR"></label>
+<label>Parentesco<input type="text" id="parentesco" required></label>
+<label>Email<input type="email" id="email" required></label>
 </div>
-<button type="submit" id="btnEnviar">Enviar inscripción</button>
+<button type="submit" id="btnEnviar">Enviar</button>
 <div id="statusMessage" class="status"></div>
 </form>
-<p style="margin-top:20px;color:#64748b;font-size:0.85rem">Guarda directo en Google Sheets hoja <b>Respuestas</b>.</p>
 </div>
 <script>
-const API_BASE = "https://script.google.com/macros/s/AKfycbwTxGTqQFwJDF1Uicu5S9FwWQjGqUT5sRKP-pYrjBfOtBitYx9YBpDFhRFTNWdjQKe_gQ/exec";
-const form = document.getElementById('registrationForm');
-const statusEl = document.getElementById('statusMessage');
-const btn = document.getElementById('btnEnviar');
+let activeEvents=[];
+async function loadEvents(){
+  const info=document.getElementById('eventInfo'); const sub=document.getElementById('subtitle'); const form=document.getElementById('registrationForm'); const sel=document.getElementById('eventoSelect');
+  try{
+    const r=await fetch(`${API_BASE}?action=getEvents&t=${Date.now()}`); const res=await r.json();
+    activeEvents=res.events||[];
+    if(activeEvents.length===0){ info.innerHTML='<div class="status warning">⚠️ No hay eventos activos</div>'; sub.textContent='No hay eventos.'; return; }
+    form.style.display='grid'; sub.textContent='Completa tus datos';
+    sel.innerHTML=''; activeEvents.forEach(ev=>{ const o=document.createElement('option'); o.value=ev.id; o.textContent=ev.nombre+' - '+ev.fecha; sel.appendChild(o); });
+    info.innerHTML=`<div class="event-card"><b>🎉 ${activeEvents[0].nombre}</b><br>${activeEvents[0].descripcion||''}</div>`;
+  }catch(e){ info.innerHTML='<div class="status error">Error: '+e.message+'</div>'; }
+}
+const form=document.getElementById('registrationForm'); const statusEl=document.getElementById('statusMessage'); const btn=document.getElementById('btnEnviar');
 function showStatus(t,c){ statusEl.textContent=t; statusEl.className='status '+c; }
 form.addEventListener('submit', async (e)=>{
   e.preventDefault();
-  const data = {
-    action:'register',
-    nombres: document.getElementById('nombres').value.trim(),
-    apellidos: document.getElementById('apellidos').value.trim(),
-    nombreEstudiante: document.getElementById('nombreEstudiante').value.trim(),
-    gradoSeccion: document.getElementById('gradoSeccion').value.trim(),
-    parentesco: document.getElementById('parentesco').value.trim(),
-    email: document.getElementById('email').value.trim()
-  };
-  if(!data.nombres || !data.apellidos || !data.nombreEstudiante || !data.email){ showStatus('Completa todos los campos','error'); return; }
-  btn.disabled=true; btn.innerText='Enviando...'; showStatus('Guardando en Google Sheets y enviando QR...','loading');
-  try{
-    const r = await fetch(API_BASE, {method:'POST', body:JSON.stringify(data), headers:{'Content-Type':'text/plain;charset=utf-8'} });
-    const res = await r.json();
-    if(res.status==='OK'){ showStatus('✅ Registro completo. Revisa tu correo: '+res.email+' - ID: '+res.id,'success'); form.reset(); }
-    else{ showStatus('Error: '+(res.message||'No se pudo registrar'),'error'); }
-  }catch(err){ showStatus('Error conexión: '+err.message,'error'); }
-  finally{ btn.disabled=false; btn.innerText='Enviar inscripción'; }
+  const data={action:'register', eventoId:document.getElementById('eventoSelect').value, nombres:document.getElementById('nombres').value.trim(), apellidos:document.getElementById('apellidos').value.trim(), nombreEstudiante:document.getElementById('nombreEstudiante').value.trim(), gradoSeccion:document.getElementById('gradoSeccion').value.trim(), parentesco:document.getElementById('parentesco').value.trim(), email:document.getElementById('email').value.trim()};
+  btn.disabled=true; showStatus('Guardando...','loading');
+  try{ const r=await fetch(API_BASE,{method:'POST', body:JSON.stringify(data), headers:{'Content-Type':'text/plain;charset=utf-8'}}); const res=await r.json(); if(res.status==='OK'){ showStatus('✅ '+res.evento.nombre+' - ID: '+res.id,'success'); form.reset(); } else showStatus('Error: '+(res.message||''),'error'); }catch(err){ showStatus('Error: '+err.message,'error'); } finally{ btn.disabled=false; }
 });
+window.addEventListener('load', loadEvents);
 </script>
 </body>
 </html>
