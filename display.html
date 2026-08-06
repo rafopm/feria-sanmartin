@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Pantalla de Bienvenida - Feria San Martín</title>
+<style>
+:root{color-scheme:dark;font-family:'Inter','Segoe UI',Arial,sans-serif;background:#020617;color:#f8fafc}
+*{box-sizing:border-box} body{margin:0;min-height:100vh;overflow:hidden;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at top left, rgba(56,189,248,0.16), transparent 24%),radial-gradient(circle at bottom right, rgba(168,85,247,0.12), transparent 22%),linear-gradient(180deg, #020617 0%, #090b16 100%)}
+.screen{width:100%;height:100%;padding:40px;display:grid;place-items:center} .card{width:min(1200px,calc(100% - 80px));min-height:520px;padding:48px;border-radius:36px;background:rgba(10,14,31,0.88);border:1px solid rgba(96,165,250,0.12);box-shadow:0 32px 90px rgba(0,0,0,0.35);position:relative;overflow:hidden}
+.welcome-card{margin-top:32px;padding:36px 34px;border-radius:30px;background:linear-gradient(180deg, rgba(15,23,42,0.95), rgba(8,16,32,0.96));border:1px solid rgba(14,165,233,0.18);backdrop-filter:blur(16px)}
+.welcome-text h2{font-size:clamp(3rem,5vw,5.2rem);margin:0;color:#7dd3fc} .welcome-text p{margin:16px 0 0;font-size:clamp(1.1rem,1.5vw,1.45rem);color:#cbd5e1}
+.message-banner{margin-top:16px;padding:18px 22px;border-radius:18px;background:rgba(255,255,255,0.06);color:#bfdbfe}
+.waiting-state{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center} .waiting-state h3{margin:0;font-size:clamp(2rem,3vw,3.4rem);color:#93c5fd} .waiting-state p{margin:0;color:#94a3b8}
+.confetti-piece{position:absolute;width:12px;height:12px;pointer-events:none;border-radius:4px} .glow-ring{position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at 50% 20%, rgba(56,189,248,0.18), transparent 28%),radial-gradient(circle at 14% 80%, rgba(168,85,247,0.12), transparent 18%)}
+@keyframes flashIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}} .flash-in{animation:flashIn 0.8s ease-out forwards}
+</style>
+</head>
+<body>
+<div class="screen"><div class="card"><div class="glow-ring"></div>
+<div class="waiting-state" id="waitingState"><h3>Esperando a los siguientes invitados...</h3><p>Este panel se actualiza automáticamente desde Google Sheets</p><p style="font-size:0.9rem;color:#475569" id="apiStatus">Conectado a Sheets</p></div>
+<div class="welcome-card" id="welcomeCard" style="display:none;"><div class="welcome-text flash-in"><h2 id="welcomeTitle">¡BIENVENIDO(A)!</h2><p id="welcomeSubtitle"></p></div><div class="message-banner" id="welcomeMessage"></div></div>
+</div></div>
+<script>
+const API_BASE = "https://script.google.com/a/macros/colegiosanmartin.edu.pe/s/AKfycbyNv8GsbBGB-w45ZkPIoV2Erwx9VATaQNy7Uz4kKLHyIjP3ig9arOdrT6NixI4auIv8Cg/exec";
+let lastSeenInvitation=null; let isShowing=false;
+const welcomeCard=document.getElementById('welcomeCard');
+const waitingState=document.getElementById('waitingState');
+const welcomeTitle=document.getElementById('welcomeTitle');
+const welcomeSubtitle=document.getElementById('welcomeSubtitle');
+const welcomeMessage=document.getElementById('welcomeMessage');
+const apiStatus=document.getElementById('apiStatus');
+
+async function fetchLatestIngreso(){
+  if(isShowing) return;
+  try{
+    const r = await fetch(`${API_BASE}?action=latest&t=${Date.now()}`, {cache:'no-store'});
+    const data = await r.json();
+    if(data && data.status==='INGRESADO' && data.id!==lastSeenInvitation){
+      lastSeenInvitation=data.id;
+      showWelcome(data);
+      apiStatus.textContent='Último: '+data.id+' - '+new Date().toLocaleTimeString();
+    }
+  }catch(e){ apiStatus.textContent='Error conexión Sheets: '+e.message; }
+}
+function showWelcome(data){
+  isShowing=true; waitingState.style.display='none'; welcomeCard.style.display='block';
+  welcomeTitle.textContent='¡BIENVENIDO(A)! '+data.nombres+' '+data.apellidos;
+  welcomeSubtitle.textContent=data.parentesco+' de '+data.estudiante+' ('+data.grado+')';
+  welcomeMessage.textContent='Gracias por acompañarnos. Pase adelante con confianza.';
+  createConfetti(); playWelcomeTone(); speakWelcome(data);
+  setTimeout(()=>{ welcomeCard.style.display='none'; waitingState.style.display='flex'; isShowing=false; }, 6000);
+}
+function createConfetti(){ const count=28; for(let i=0;i<count;i++){ const c=document.createElement('div'); c.className='confetti-piece'; const s=Math.floor(Math.random()*12)+8; c.style.width=s+'px'; c.style.height=s+'px'; c.style.background=['#38bdf8','#a78bfa','#f97316','#34d399','#60a5fa','#fef08a'][Math.floor(Math.random()*6)]; c.style.left=Math.random()*80+'%'; c.style.top=Math.random()*20+'%'; document.body.appendChild(c); c.animate([{transform:'translateY(0) rotate(0deg)',opacity:1},{transform:'translateY(320px) rotate('+(Math.random()*720-360)+'deg)',opacity:0}],{duration:2200+Math.random()*600,easing:'cubic-bezier(0.4,0,0.2,1)',delay:Math.random()*300,fill:'forwards'}); setTimeout(()=>c.remove(),3200); } }
+function playWelcomeTone(){ try{ const ctx=new(window.AudioContext||window.webkitAudioContext)(); const now=ctx.currentTime; const o=ctx.createOscillator(); const g=ctx.createGain(); o.type='triangle'; o.frequency.setValueAtTime(520,now); o.frequency.linearRampToValueAtTime(680,now+0.25); g.gain.setValueAtTime(0,now); g.gain.linearRampToValueAtTime(0.24,now+0.02); g.gain.exponentialRampToValueAtTime(0.001,now+0.9); o.connect(g); g.connect(ctx.destination); o.start(now); o.stop(now+1.1); }catch(e){} }
+function speakWelcome(data){ try{ const p='Bienvenida '+data.nombres+' '+data.apellidos+', '+data.parentesco.toLowerCase()+' de '+data.estudiante; const u=new SpeechSynthesisUtterance(p); u.lang='es-ES'; u.rate=0.95; window.speechSynthesis.cancel(); window.speechSynthesis.speak(u); }catch(e){} }
+setInterval(fetchLatestIngreso, 1500);
+window.addEventListener('load', fetchLatestIngreso);
+</script>
+</body>
+</html>
