@@ -3,35 +3,59 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-<title>Escáner</title>
+<title>Escáner - Colegio San Martín</title>
+<script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script src="config.js"></script>
-<style>
-:root{color-scheme:dark;font-family:Arial;background:#020617;color:#f8fafc} body{margin:0;min-height:100vh;display:flex;justify-content:center;padding:16px}
-.page{width:min(100%,700px);display:grid;gap:18px;background:rgba(12,18,38,0.92);border-radius:28px;padding:24px}
-#reader{width:100%;min-height:50vh;border-radius:24px;background:#07101f} #reader video{width:100%!important;object-fit:cover}
-.status{padding:20px;border-radius:18px;font-weight:700} .success{background:#a7f3d0;color:#0f172a} .error{background:#dc2626} .warning{background:#f59e0b} .pending{background:#38bdf8;color:#020617}
-button{border:none;border-radius:16px;padding:16px;font-weight:800;cursor:pointer} .primary{background:#38bdf8;color:#020617;width:100%} .secondary{background:rgba(255,255,255,0.08);color:#e2e8f0}
-</style>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;800&display=swap" rel="stylesheet">
+<style>body{font-family:'Plus Jakarta Sans',sans-serif} #reader video{object-fit:cover}</style>
 </head>
-<body>
-<main class="page">
-<h1>Escáner Ingreso</h1>
-<div id="eventTag"></div>
-<div id="reader"></div>
-<button id="startBtn" class="primary">📷 Activar cámara</button>
-<div id="message" class="status pending">Toca para iniciar</div>
-<button id="nextBtn" class="primary" style="display:none">➡️ Siguiente</button>
-<button id="switchBtn" class="secondary" style="display:none">Cambiar cámara</button>
-</main>
+<body class="min-h-screen bg-[#020617] text-white flex items-center justify-center p-4 relative overflow-hidden">
+  <div class="fixed inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(56,189,248,0.12),transparent_30%),radial-gradient(circle_at_80%_80%,rgba(168,85,247,0.1),transparent_25%)] pointer-events-none"></div>
+  
+  <div class="relative w-full max-w-[720px] bg-white/[0.05] border border-white/10 rounded-[32px] p-6 md:p-8 backdrop-blur-xl shadow-2xl">
+    <div class="flex items-start justify-between gap-4">
+      <div>
+        <h1 class="text-3xl font-extrabold tracking-tight">Escáner de Ingreso</h1>
+        <p class="text-white/50 text-sm mt-1">Llegada desordenada OK • Cola real backend</p>
+      </div>
+      <div id="eventTag" class="shrink-0 bg-violet-500/15 border border-violet-500/30 text-violet-200 px-3 py-1.5 rounded-full text-xs font-bold">Cargando evento...</div>
+    </div>
+
+    <div class="mt-6 relative rounded-[24px] overflow-hidden bg-[#0a1020] border border-white/10 aspect-[4/3] md:aspect-[16/10]">
+      <div id="reader" class="w-full h-full"></div>
+      <div class="absolute inset-0 pointer-events-none border-[2px] border-white/10 rounded-[24px]"></div>
+      <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 border-2 border-sky-400/50 rounded-3xl pointer-events-none hidden md:block shadow-[0_0_40px_rgba(56,189,248,0.3)]"></div>
+    </div>
+
+    <button id="startBtn" class="mt-6 w-full bg-gradient-to-br from-sky-400 to-cyan-400 text-slate-950 font-extrabold py-4 rounded-2xl shadow-[0_12px_24px_rgba(56,189,248,0.3)] hover:scale-[1.01] transition">📷 Tocar para activar cámara</button>
+
+    <div id="message" class="mt-4 p-4 rounded-2xl bg-white/[0.06] border border-white/10 text-sm font-bold">Esperando activación...</div>
+
+    <div class="mt-4 grid grid-cols-2 gap-3">
+      <button id="nextBtn" class="hidden bg-white text-slate-950 font-extrabold py-4 rounded-2xl">➡️ Siguiente invitado</button>
+      <button id="switchBtn" class="hidden bg-white/10 border border-white/10 text-white/80 py-4 rounded-2xl">🔄 Cambiar cámara</button>
+    </div>
+
+    <p class="text-center text-white/20 text-[11px] mt-6">GitHub Pages → Sheets • config.js centralizado</p>
+  </div>
+
 <script>
 let html5QrCode=null, currentFacing="environment", scanning=false, lastId=null, lastTime=0;
 const msg=document.getElementById('message'), startBtn=document.getElementById('startBtn'), nextBtn=document.getElementById('nextBtn'), switchBtn=document.getElementById('switchBtn');
-function update(t,c){msg.textContent=t; msg.className='status '+c;}
-async function loadEvent(){try{const r=await fetch(`${API_BASE}?action=getEvents`); const j=await r.json(); document.getElementById('eventTag').textContent=j.events?.[0]?.nombre||'No hay evento activo';}catch(e){}}
-async function startScanner(){if(scanning) return; update('Solicitando...','pending'); try{if(html5QrCode){try{await html5QrCode.stop(); html5QrCode.clear();}catch(e){}} html5QrCode=new Html5Qrcode('reader'); await html5QrCode.start({facingMode:currentFacing},{fps:15,qrbox:{width:280,height:280}}, onScan); scanning=true; startBtn.style.display='none'; switchBtn.style.display='block'; update('Activa - llegada desordenada OK','pending');}catch(err){update('Error: '+err.message,'error');}}
-async function onScan(decoded){const now=Date.now(), id=decoded.trim(); if(id===lastId && now-lastTime<5000) return; lastId=id; lastTime=now; try{await html5QrCode.pause();}catch(e){} scanning=false; update('Verificando '+id+'...','pending'); try{const r=await fetch(`${API_BASE}?action=check&id=${encodeURIComponent(id)}&t=${now}`); const res=await r.json(); if(res.status==='OK') update('✅ '+res.data.nombres+' '+res.data.apellidos+' - '+res.data.eventoNombre,'success'); else if(res.status==='DUPLICADO') update('⚠️ YA INGRESÓ','warning'); else if(res.status==='EVENTO_INACTIVO') update('🚫 Evento inactivo','error'); else update('🚫 NO VÁLIDO','error');}catch(e){update('Error conexión','error');} nextBtn.style.display='block';}
-function resume(){nextBtn.style.display='none'; if(html5QrCode){try{html5QrCode.resume(); scanning=true; update('Listo','pending');}catch(e){startScanner();}}}
+function update(t,c){
+  const base="mt-4 p-4 rounded-2xl text-sm font-bold border ";
+  let cls=base;
+  if(c==='success') cls+= "bg-emerald-400 text-slate-950 border-emerald-300";
+  else if(c==='error') cls+= "bg-red-500/90 text-white border-red-400";
+  else if(c==='warning') cls+= "bg-amber-400 text-slate-950 border-amber-300";
+  else cls+= "bg-white/[0.06] border-white/10 text-white";
+  msg.className=cls; msg.textContent=t;
+}
+async function loadEvent(){try{const r=await fetch(`${API_BASE}?action=getEvents&t=${Date.now()}`); const j=await r.json(); document.getElementById('eventTag').textContent=j.events?.[0]?.nombre||'⚠️ Sin evento activo';}catch(e){document.getElementById('eventTag').textContent='Error eventos';}}
+async function startScanner(){if(scanning) return; update('Solicitando cámara...','pending'); try{if(html5QrCode){try{await html5QrCode.stop(); html5QrCode.clear();}catch(e){}} html5QrCode=new Html5Qrcode('reader'); await html5QrCode.start({facingMode:currentFacing},{fps:15,qrbox:{width:280,height:280}}, onScan); scanning=true; startBtn.style.display='none'; switchBtn.style.display='block'; update('Cámara activa • Apunta al QR (orden llegada)','pending'); setTimeout(()=>{document.querySelectorAll('#reader video').forEach(v=>{v.setAttribute('playsinline','true'); v.muted=true;});},300);}catch(err){update('Error: '+err.message,'error'); if(currentFacing==='environment'){currentFacing='user'; scanning=false; setTimeout(startScanner,400);}}}
+async function onScan(decoded){const now=Date.now(), id=decoded.trim(); if(id===lastId && now-lastTime<5000) return; lastId=id; lastTime=now; try{await html5QrCode.pause();}catch(e){} scanning=false; update('Verificando '+id+' en Sheets...','pending'); try{const r=await fetch(`${API_BASE}?action=check&id=${encodeURIComponent(id)}&t=${now}`); const res=await r.json(); if(res.status==='OK') update('✅ BIENVENIDO: '+res.data.nombres+' '+res.data.apellidos+' → '+res.data.eventoNombre,'success'); else if(res.status==='DUPLICADO') update('⚠️ YA INGRESÓ: '+(res.data.nombres||''),'warning'); else if(res.status==='EVENTO_INACTIVO') update('🚫 Evento inactivo','error'); else if(res.status==='NO_HAY_EVENTO') update('⚠️ No hay evento activo','error'); else update('🚫 INVITACIÓN NO VÁLIDA','error');}catch(e){update('Error conexión','error');} nextBtn.style.display='block';}
+function resume(){nextBtn.style.display='none'; if(html5QrCode){try{html5QrCode.resume(); scanning=true; update('Listo para siguiente','pending');}catch(e){startScanner();}} else startScanner();}
 startBtn.addEventListener('click', startScanner); nextBtn.addEventListener('click', resume); switchBtn.addEventListener('click', async()=>{currentFacing=currentFacing==='environment'?'user':'environment'; scanning=false; await startScanner();});
 window.addEventListener('load', loadEvent);
 </script>
