@@ -3,64 +3,147 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Registro de Invitados</title>
-<style>
-:root{color-scheme:dark;font-family:'Inter',Arial,sans-serif;background:radial-gradient(circle at top left, rgba(14,165,233,0.18), transparent 24%),linear-gradient(180deg, #020617 0%, #090b16 100%);color:#e2e8f0}
-*{box-sizing:border-box} body{margin:0;min-height:100vh;display:flex;justify-content:center;align-items:center;padding:24px}
-.container{width:min(100%,960px);background:rgba(9,14,28,0.95);border:1px solid rgba(148,163,184,0.12);border-radius:28px;padding:36px}
-.grid-two{display:grid;grid-template-columns:repeat(2,1fr);gap:18px} label{display:flex;flex-direction:column;gap:8px;color:#cbd5e1} input,select{border:1px solid rgba(148,163,184,0.18);border-radius:16px;padding:14px 16px;background:rgba(15,23,42,0.9);color:#f8fafc}
-button{border:none;border-radius:18px;padding:16px 28px;font-weight:700;background:linear-gradient(135deg,#38bdf8,#0ea5e9);color:#020617;cursor:pointer}
-.status{margin-top:14px;padding:16px;border-radius:18px;display:none} .success{display:block;border:1px solid #34d399;color:#bbf7d0} .error{display:block;border:1px solid #f87171;color:#fecaca} .loading{display:block;border:1px solid #38bdf8;color:#bfdbfe} .warning{display:block;border:1px solid #fbbf24;color:#fef3c7}
-.event-card{background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.2);border-radius:16px;padding:16px;margin-bottom:12px}
-@media(max-width:780px){.grid-two{grid-template-columns:1fr}}
-</style>
+<title>Registro Invitados - San Martín</title>
+<script src="https://cdn.tailwindcss.com"></script>
 <script src="config.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<style> body{font-family:'Inter',sans-serif} </style>
 </head>
-<body>
-<div class="container">
-<h1>Registro de Invitados</h1>
-<div id="eventInfo"></div>
-<p id="subtitle">Cargando eventos...</p>
-<form id="registrationForm" style="display:none">
-<label>Evento<select id="eventoSelect" required></select></label>
-<div class="grid-two">
-<label>Nombres<input type="text" id="nombres" required></label>
-<label>Apellidos<input type="text" id="apellidos" required></label>
-</div>
-<div class="grid-two">
-<label>Nombre Estudiante<input type="text" id="nombreEstudiante" required></label>
-<label>Grado y Sección<input type="text" id="gradoSeccion" required></label>
-</div>
-<div class="grid-two">
-<label>Parentesco<input type="text" id="parentesco" required></label>
-<label>Email<input type="email" id="email" required></label>
-</div>
-<button type="submit" id="btnEnviar">Enviar</button>
-<div id="statusMessage" class="status"></div>
-</form>
-</div>
+<body class="min-h-screen bg-[#020617] text-slate-200 flex items-center justify-center p-6 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.18),transparent_24%),radial-gradient(circle_at_bottom_right,rgba(168,85,247,0.14),transparent_22%)]">
+  
+  <!-- Loading Tailwind -->
+  <div id="loadingState" class="flex flex-col items-center justify-center gap-4 py-20">
+    <div class="relative">
+      <div class="w-16 h-16 border-4 border-slate-800 rounded-full"></div>
+      <div class="absolute top-0 left-0 w-16 h-16 border-4 border-sky-400 border-t-transparent rounded-full animate-spin"></div>
+    </div>
+    <div class="text-center">
+      <p class="text-sky-300 font-semibold animate-pulse">Cargando evento activo...</p>
+      <p class="text-slate-500 text-sm mt-1">Consultando Google Sheets</p>
+    </div>
+  </div>
+
+  <!-- No eventos -->
+  <div id="noEventState" class="hidden max-w-2xl w-full">
+    <div class="bg-slate-900/90 border border-amber-500/20 rounded-[28px] p-10 text-center shadow-2xl">
+      <div class="w-20 h-20 bg-amber-500/10 rounded-full flex items-center justify-center mx-auto mb-6 text-3xl">⚠️</div>
+      <h2 class="text-3xl font-extrabold mb-3">No hay eventos activos</h2>
+      <p class="text-slate-400">En este momento no hay ningún evento con <span class="text-amber-300 font-bold">Activo = TRUE</span> en la hoja <b>Eventos</b>. Activa un evento para habilitar el registro.</p>
+    </div>
+  </div>
+
+  <!-- Contenido evento activo -->
+  <div id="mainContent" class="hidden w-full max-w-5xl">
+    <div class="bg-slate-900/90 border border-slate-800 rounded-[28px] shadow-[0_32px_80px_rgba(0,0,0,0.35)] p-8 md:p-10">
+      
+      <!-- Header evento TRUE -->
+      <div id="eventHeader" class="mb-8">
+        <!-- Se llena dinámicamente solo con el evento TRUE -->
+      </div>
+
+      <form id="registrationForm" class="grid gap-5">
+        <input type="hidden" id="eventoId">
+        <div class="grid md:grid-cols-2 gap-5">
+          <label class="flex flex-col gap-2 text-sm text-slate-300">Nombres del asistente<input id="nombres" required class="rounded-2xl bg-slate-800/90 border border-slate-700 px-4 py-3.5 text-white focus:outline-none focus:ring-2 focus:ring-sky-500" placeholder="María Fernanda"></label>
+          <label class="flex flex-col gap-2 text-sm text-slate-300">Apellidos<input id="apellidos" required class="rounded-2xl bg-slate-800/90 border border-slate-700 px-4 py-3.5 text-white focus:outline-none focus:ring-2 focus:ring-sky-500" placeholder="López García"></label>
+        </div>
+        <div class="grid md:grid-cols-2 gap-5">
+          <label class="flex flex-col gap-2 text-sm text-slate-300">Nombre del Estudiante<input id="nombreEstudiante" required class="rounded-2xl bg-slate-800/90 border border-slate-700 px-4 py-3.5 text-white" placeholder="Juan López"></label>
+          <label class="flex flex-col gap-2 text-sm text-slate-300">Grado y Sección<input id="gradoSeccion" required class="rounded-2xl bg-slate-800/90 border border-slate-700 px-4 py-3.5 text-white" placeholder="3° A"></label>
+        </div>
+        <div class="grid md:grid-cols-2 gap-5">
+          <label class="flex flex-col gap-2 text-sm text-slate-300">Parentesco<input id="parentesco" required class="rounded-2xl bg-slate-800/90 border border-slate-700 px-4 py-3.5 text-white" placeholder="Mamá / Papá"></label>
+          <label class="flex flex-col gap-2 text-sm text-slate-300">Correo (llegará QR)<input id="email" type="email" required class="rounded-2xl bg-slate-800/90 border border-slate-700 px-4 py-3.5 text-white" placeholder="correo@gmail.com"></label>
+        </div>
+        <button id="btnEnviar" type="submit" class="w-fit bg-gradient-to-r from-sky-400 to-sky-500 text-slate-950 font-extrabold px-8 py-4 rounded-2xl hover:scale-[1.02] transition">Enviar inscripción</button>
+        <div id="statusMessage" class="hidden mt-2 p-4 rounded-2xl text-sm"></div>
+      </form>
+    </div>
+  </div>
+
 <script>
-let activeEvents=[];
-async function loadEvents(){
-  const info=document.getElementById('eventInfo'); const sub=document.getElementById('subtitle'); const form=document.getElementById('registrationForm'); const sel=document.getElementById('eventoSelect');
+let activeEvent = null;
+
+async function loadActiveEvent(){
+  const loading = document.getElementById('loadingState');
+  const noEvent = document.getElementById('noEventState');
+  const main = document.getElementById('mainContent');
+  
   try{
-    const r=await fetch(`${API_BASE}?action=getEvents&t=${Date.now()}`); const res=await r.json();
-    activeEvents=res.events||[];
-    if(activeEvents.length===0){ info.innerHTML='<div class="status warning">⚠️ No hay eventos activos</div>'; sub.textContent='No hay eventos.'; return; }
-    form.style.display='grid'; sub.textContent='Completa tus datos';
-    sel.innerHTML=''; activeEvents.forEach(ev=>{ const o=document.createElement('option'); o.value=ev.id; o.textContent=ev.nombre+' - '+ev.fecha; sel.appendChild(o); });
-    info.innerHTML=`<div class="event-card"><b>🎉 ${activeEvents[0].nombre}</b><br>${activeEvents[0].descripcion||''}</div>`;
-  }catch(e){ info.innerHTML='<div class="status error">Error: '+e.message+'</div>'; }
+    const r = await fetch(`${API_BASE}?action=getEvents&t=${Date.now()}`, {cache:'no-store'});
+    const res = await r.json();
+    const events = (res.events||[]).filter(ev=>ev.activo===true);
+    
+    loading.classList.add('hidden');
+    
+    if(events.length===0){
+      noEvent.classList.remove('hidden');
+      return;
+    }
+    
+    // SOLO EL EVENTO EN TRUE - el primero
+    activeEvent = events[0];
+    document.getElementById('eventoId').value = activeEvent.id;
+    
+    // Mensaje de bienvenida diferenciado por evento (columna Mensaje_Bienvenida)
+    document.getElementById('eventHeader').innerHTML = `
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <span class="inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 px-3 py-1 rounded-full text-xs font-bold">● ACTIVO - ${activeEvent.id}</span>
+          <h1 class="text-4xl font-extrabold tracking-tight mt-3 leading-tight">${activeEvent.nombre}</h1>
+          <p class="text-slate-400 mt-2 max-w-2xl">${activeEvent.descripcion||''}</p>
+          <p class="text-slate-500 text-sm mt-1">📅 ${activeEvent.fecha||''}</p>
+        </div>
+      </div>
+      <div class="mt-6 bg-sky-500/10 border border-sky-500/20 rounded-2xl p-5">
+        <p class="text-sky-200 font-semibold">💬 Mensaje de bienvenida de este evento:</p>
+        <p class="text-white text-lg mt-1 leading-relaxed">"${activeEvent.mensaje||'¡Bienvenidos a nuestro evento!'}"</p>
+        <p class="text-sky-300/60 text-xs mt-2">Este mensaje se mostrará en la pantalla de bienvenida y en la voz</p>
+      </div>
+    `;
+    
+    main.classList.remove('hidden');
+    
+  }catch(e){
+    loading.innerHTML = `<div class="bg-red-900/20 border border-red-500/30 rounded-2xl p-6 text-red-300">Error cargando eventos: ${e.message}<br><span class="text-xs text-slate-500">Verifica API_BASE en config.js</span></div>`;
+  }
 }
-const form=document.getElementById('registrationForm'); const statusEl=document.getElementById('statusMessage'); const btn=document.getElementById('btnEnviar');
-function showStatus(t,c){ statusEl.textContent=t; statusEl.className='status '+c; }
+
+const form=document.getElementById('registrationForm');
+const statusEl=document.getElementById('statusMessage');
+const btn=document.getElementById('btnEnviar');
+function showStatus(t,type){
+  statusEl.textContent=t;
+  statusEl.className='mt-2 p-4 rounded-2xl text-sm ' + (type==='success' ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-200 block' : type==='error' ? 'bg-red-500/10 border border-red-500/20 text-red-200 block' : 'bg-sky-500/10 border border-sky-500/20 text-sky-200 block');
+  statusEl.classList.remove('hidden');
+}
+
 form.addEventListener('submit', async (e)=>{
   e.preventDefault();
-  const data={action:'register', eventoId:document.getElementById('eventoSelect').value, nombres:document.getElementById('nombres').value.trim(), apellidos:document.getElementById('apellidos').value.trim(), nombreEstudiante:document.getElementById('nombreEstudiante').value.trim(), gradoSeccion:document.getElementById('gradoSeccion').value.trim(), parentesco:document.getElementById('parentesco').value.trim(), email:document.getElementById('email').value.trim()};
-  btn.disabled=true; showStatus('Guardando...','loading');
-  try{ const r=await fetch(API_BASE,{method:'POST', body:JSON.stringify(data), headers:{'Content-Type':'text/plain;charset=utf-8'}}); const res=await r.json(); if(res.status==='OK'){ showStatus('✅ '+res.evento.nombre+' - ID: '+res.id,'success'); form.reset(); } else showStatus('Error: '+(res.message||''),'error'); }catch(err){ showStatus('Error: '+err.message,'error'); } finally{ btn.disabled=false; }
+  if(!activeEvent){ showStatus('No hay evento activo','error'); return; }
+  const data={
+    action:'register',
+    eventoId: activeEvent.id,
+    nombres: document.getElementById('nombres').value.trim(),
+    apellidos: document.getElementById('apellidos').value.trim(),
+    nombreEstudiante: document.getElementById('nombreEstudiante').value.trim(),
+    gradoSeccion: document.getElementById('gradoSeccion').value.trim(),
+    parentesco: document.getElementById('parentesco').value.trim(),
+    email: document.getElementById('email').value.trim()
+  };
+  btn.disabled=true; btn.textContent='Enviando...'; showStatus('Guardando en Sheets y enviando QR para '+activeEvent.nombre+'...','loading');
+  try{
+    const r=await fetch(API_BASE, {method:'POST', body:JSON.stringify(data), headers:{'Content-Type':'text/plain;charset=utf-8'}});
+    const res=await r.json();
+    if(res.status==='OK'){
+      showStatus(`✅ Registro para ${res.evento.nombre} completo. ID: ${res.id} - Revisa ${res.email}`,'success');
+      form.reset(); document.getElementById('eventoId').value=activeEvent.id;
+    } else if(res.status==='NO_HAY_EVENTO'){ showStatus('⚠️ No hay eventos activos','error'); }
+    else{ showStatus('Error: '+(res.message||'No se pudo registrar'),'error'); }
+  }catch(err){ showStatus('Error: '+err.message,'error'); } finally{ btn.disabled=false; btn.textContent='Enviar inscripción'; }
 });
-window.addEventListener('load', loadEvents);
+
+window.addEventListener('load', loadActiveEvent);
 </script>
 </body>
 </html>
