@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Registro - Colegio San Martín</title>
+<title>Reserva tu entrada</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="config.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&display=swap" rel="stylesheet">
@@ -12,63 +12,96 @@
 <body class="min-h-screen bg-[#020617] text-white flex items-center justify-center p-4 relative">
   <div class="fixed inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(56,189,248,0.12),transparent_35%),radial-gradient(circle_at_80%_80%,rgba(168,85,247,0.1),transparent_30%)] pointer-events-none"></div>
 
-  <!-- Cargando - amigable -->
-  <div id="loadingState" class="relative z-10 flex flex-col items-center justify-center py-20">
-    <div class="w-12 h-12 border-4 border-white/10 border-t-sky-400 rounded-full animate-spin"></div>
-    <p class="mt-4 font-bold text-white">Conectando...</p>
-    <p class="text-white/40 text-sm mt-1">Estamos preparando todo para ti</p>
+  <!-- Conectando -->
+  <div id="loadingState" class="relative z-10 flex flex-col items-center py-20">
+    <div class="w-10 h-10 border-4 border-white/10 border-t-white rounded-full animate-spin"></div>
+    <p class="mt-4 font-bold">Conectando...</p>
+    <p class="text-white/40 text-sm mt-1">Un momento por favor</p>
   </div>
 
   <!-- Sin evento -->
-  <div id="noEventState" class="hidden relative z-10 max-w-md w-full bg-white/[0.05] border border-white/10 rounded-[28px] p-8 text-center backdrop-blur-xl">
-    <div class="text-5xl mb-4">🎟️</div>
-    <h2 class="text-2xl font-extrabold">Aún no hay eventos disponibles</h2>
-    <p class="text-white/60 mt-3 text-sm leading-relaxed">En este momento no tenemos inscripciones abiertas. Vuelve pronto, estamos preparando algo especial para ti.</p>
+  <div id="noEventState" class="hidden relative z-10 max-w-md w-full bg-white/[0.05] border border-white/10 rounded-[28px] p-8 text-center">
+    <div class="text-4xl mb-3">🎟️</div>
+    <h2 class="text-xl font-bold">No hay inscripciones abiertas</h2>
+    <p class="text-white/50 text-sm mt-2">Vuelve pronto, estamos preparando algo especial.</p>
   </div>
 
-  <!-- Evento activo - Solo info necesaria para usuario -->
+  <!-- Contenedor principal -->
   <div id="mainContent" class="hidden relative z-10 w-full max-w-5xl">
     <div class="grid lg:grid-cols-2 gap-6">
       <!-- Info evento -->
-      <div class="bg-gradient-to-br from-white/[0.06] to-white/[0.03] border border-white/10 rounded-[32px] p-8 backdrop-blur-xl">
-        <div id="eventBadge" class="inline-flex bg-emerald-500/15 text-emerald-300 border border-emerald-500/20 px-3 py-1 rounded-full text-xs font-bold">● Inscripciones abiertas</div>
+      <div class="bg-white/[0.05] border border-white/10 rounded-[32px] p-8">
+        <div class="inline-flex bg-emerald-500/15 text-emerald-300 border border-emerald-500/20 px-3 py-1 rounded-full text-xs font-bold">● Inscripciones abiertas</div>
         <h1 id="eventNombre" class="text-4xl font-extrabold mt-4 leading-tight"></h1>
-        <p id="eventDesc" class="text-white/60 mt-3"></p>
-        <p id="eventFecha" class="text-white/40 text-sm mt-2"></p>
+        <p id="eventDesc" class="text-white/50 mt-3 text-sm"></p>
+        <p id="eventFecha" class="text-white/30 text-sm mt-2"></p>
         <div class="mt-6 bg-white/[0.04] border border-white/5 rounded-2xl p-5">
-          <p id="eventMensaje" class="text-white text-[15px] leading-relaxed"></p>
-        </div>
-        <div class="mt-6 flex items-center gap-2 text-xs text-white/30">
-          <span>🔒</span><span>Tu información está segura</span>
+          <p id="eventMensaje" class="text-white/80 text-sm leading-relaxed"></p>
         </div>
       </div>
 
-      <!-- Formulario -->
-      <div class="bg-[#0e1428]/90 border border-white/10 rounded-[32px] p-8 backdrop-blur-xl">
+      <!-- PASO 1: Correo -->
+      <div id="stepEmail" class="bg-[#0e1428]/90 border border-white/10 rounded-[32px] p-8">
         <h2 class="text-2xl font-bold">Reserva tu entrada</h2>
-        <p class="text-white/50 text-sm mt-1">Te enviaremos tu ticket con código QR a tu correo</p>
+        <p class="text-white/50 text-sm mt-1">Primero verificaremos tu correo</p>
+        
+        <div class="mt-6">
+          <label class="text-sm text-white/60">Correo electrónico</label>
+          <input id="emailCheck" type="email" class="mt-2 w-full rounded-2xl bg-white/[0.06] border border-white/10 px-4 py-4 text-white text-base" placeholder="tu@correo.com" />
+          <button id="btnVerificar" class="mt-4 w-full bg-white text-slate-900 font-extrabold py-4 rounded-2xl">Continuar</button>
+          <div id="emailStatus" class="hidden mt-4 p-4 rounded-2xl text-sm"></div>
+        </div>
+      </div>
+
+      <!-- PASO 2: Formulario completo (oculto al inicio) -->
+      <div id="stepForm" class="hidden bg-[#0e1428]/90 border border-white/10 rounded-[32px] p-8">
+        <div class="flex items-center justify-between">
+          <h2 class="text-2xl font-bold">Completa tus datos</h2>
+          <button id="btnCambiarCorreo" class="text-xs text-white/40 underline">Cambiar correo</button>
+        </div>
+        <p class="text-white/50 text-sm mt-1">Correo verificado: <span id="verifiedEmail" class="text-white font-bold"></span></p>
+        
         <form id="registrationForm" class="mt-6 grid gap-4">
           <input type="hidden" id="eventoId">
+          <input type="hidden" id="emailFinal">
           <div class="grid grid-cols-2 gap-3">
-            <label class="text-sm"><span class="text-white/60">Nombres</span><input id="nombres" required class="mt-1.5 w-full rounded-2xl bg-white/[0.06] border border-white/10 px-4 py-3.5 text-white placeholder:text-white/20" placeholder="María"></label>
+            <label class="text-sm"><span class="text-white/60">Nombres</span><input id="nombres" required class="mt-1.5 w-full rounded-2xl bg-white/[0.06] border border-white/10 px-4 py-3.5 text-white" placeholder="María"></label>
             <label class="text-sm"><span class="text-white/60">Apellidos</span><input id="apellidos" required class="mt-1.5 w-full rounded-2xl bg-white/[0.06] border border-white/10 px-4 py-3.5 text-white" placeholder="López"></label>
           </div>
           <label class="text-sm"><span class="text-white/60">Nombre del estudiante</span><input id="nombreEstudiante" required class="mt-1.5 w-full rounded-2xl bg-white/[0.06] border border-white/10 px-4 py-3.5 text-white" placeholder="Juan López"></label>
           <div class="grid grid-cols-2 gap-3">
-            <label class="text-sm"><span class="text-white/60">Grado y sección</span><input id="gradoSeccion" required class="mt-1.5 w-full rounded-2xl bg-white/[0.06] border border-white/10 px-4 py-3.5 text-white" placeholder="3° A"></label>
+            <label class="text-sm"><span class="text-white/60">Grado</span><input id="gradoSeccion" required class="mt-1.5 w-full rounded-2xl bg-white/[0.06] border border-white/10 px-4 py-3.5 text-white" placeholder="3° A"></label>
             <label class="text-sm"><span class="text-white/60">Parentesco</span><input id="parentesco" required class="mt-1.5 w-full rounded-2xl bg-white/[0.06] border border-white/10 px-4 py-3.5 text-white" placeholder="Mamá"></label>
           </div>
-          <label class="text-sm"><span class="text-white/60">Correo electrónico</span><input id="email" type="email" required class="mt-1.5 w-full rounded-2xl bg-white/[0.06] border border-white/10 px-4 py-3.5 text-white" placeholder="tu@correo.com"></label>
-          <p class="text-[11px] text-white/30">Usaremos tu correo solo para enviarte la entrada. Si ya te registraste a este evento, no podrás hacerlo de nuevo.</p>
-          <button id="btnEnviar" type="submit" class="w-full bg-white text-slate-900 font-extrabold py-4 rounded-2xl hover:bg-slate-100 transition">Reservar mi entrada</button>
-          <div id="statusMessage" class="hidden p-4 rounded-2xl text-sm"></div>
+          <button id="btnEnviar" type="submit" class="w-full bg-white text-slate-900 font-extrabold py-4 rounded-2xl mt-2">Reservar mi entrada</button>
+          <div id="formStatus" class="hidden p-4 rounded-2xl text-sm"></div>
         </form>
       </div>
+
+      <!-- YA REGISTRADO -->
+      <div id="stepExists" class="hidden bg-[#0e1428]/90 border border-white/10 rounded-[32px] p-8">
+        <div class="text-center">
+          <div class="w-16 h-16 bg-emerald-500/15 rounded-full flex items-center justify-center mx-auto text-2xl">✅</div>
+          <h2 class="text-2xl font-bold mt-4">¡Ya tienes tu entrada!</h2>
+          <p class="text-white/60 text-sm mt-2">Encontramos tu registro para este evento</p>
+          <div class="mt-6 bg-white/[0.04] border border-white/10 rounded-2xl p-4 text-left">
+            <p class="text-white/40 text-xs uppercase">Tu entrada</p>
+            <p id="existsId" class="text-xl font-black text-sky-300 mt-1"></p>
+            <p id="existsNombre" class="text-white/80 text-sm mt-1"></p>
+          </div>
+          <button id="btnReenviar" class="mt-6 w-full bg-white text-slate-900 font-extrabold py-4 rounded-2xl">Reenviar ticket a mi correo</button>
+          <button id="btnOtroCorreo" class="mt-3 w-full bg-white/10 border border-white/10 text-white/70 py-3 rounded-2xl text-sm">Usar otro correo</button>
+          <div id="resendStatus" class="hidden mt-4 p-4 rounded-2xl text-sm"></div>
+        </div>
+      </div>
+
     </div>
   </div>
 
 <script>
 let activeEvent=null;
+let currentEmail="";
+
 async function loadActiveEvent(){
   const loading=document.getElementById('loadingState'), noEvent=document.getElementById('noEventState'), main=document.getElementById('mainContent');
   try{
@@ -78,35 +111,102 @@ async function loadActiveEvent(){
     loading.classList.add('hidden');
     if(events.length===0){ noEvent.classList.remove('hidden'); return; }
     activeEvent=events[0];
-    document.getElementById('eventoId').value=activeEvent.id;
     document.getElementById('eventNombre').textContent=activeEvent.nombre;
     document.getElementById('eventDesc').textContent=activeEvent.descripcion||'';
     document.getElementById('eventFecha').textContent=activeEvent.fecha ? '📅 '+activeEvent.fecha : '';
     document.getElementById('eventMensaje').textContent=activeEvent.mensaje||'¡Te esperamos con mucha alegría!';
     main.classList.remove('hidden');
-  }catch(e){ loading.innerHTML=`<div class="bg-white/[0.05] border border-white/10 rounded-2xl p-6 text-center max-w-sm"><p class="font-bold">No pudimos conectar</p><p class="text-white/50 text-sm mt-2">Intenta recargar la página</p></div>`; }
+  }catch(e){
+    loading.innerHTML=`<div class="bg-white/[0.05] border border-white/10 rounded-2xl p-6 text-center"><p class="font-bold">Sin conexión</p><p class="text-white/50 text-sm mt-2">Intenta recargar</p></div>`;
+  }
 }
-const form=document.getElementById('registrationForm'), statusEl=document.getElementById('statusMessage'), btn=document.getElementById('btnEnviar');
-function showStatus(t,type){
-  statusEl.classList.remove('hidden');
-  if(type==='success') statusEl.className='p-4 rounded-2xl text-sm bg-emerald-500/10 border border-emerald-500/20 text-emerald-200';
-  else if(type==='error') statusEl.className='p-4 rounded-2xl text-sm bg-red-500/10 border border-red-500/20 text-red-200';
-  else statusEl.className='p-4 rounded-2xl text-sm bg-sky-500/10 border border-sky-500/20 text-sky-200';
-  statusEl.textContent=t;
+
+function showStatus(el, t, type){
+  el.classList.remove('hidden');
+  if(type==='success') el.className='mt-4 p-4 rounded-2xl text-sm bg-emerald-500/10 border border-emerald-500/20 text-emerald-200';
+  else if(type==='error') el.className='mt-4 p-4 rounded-2xl text-sm bg-red-500/10 border border-red-500/20 text-red-200';
+  else el.className='mt-4 p-4 rounded-2xl text-sm bg-sky-500/10 border border-sky-500/20 text-sky-200';
+  el.textContent=t;
 }
+
+document.getElementById('btnVerificar').addEventListener('click', async ()=>{
+  const emailInput=document.getElementById('emailCheck');
+  const email=emailInput.value.trim().toLowerCase();
+  const status=document.getElementById('emailStatus');
+  if(!email || !email.includes('@')){ showStatus(status,'Por favor escribe un correo válido','error'); return; }
+  
+  document.getElementById('btnVerificar').disabled=true;
+  document.getElementById('btnVerificar').textContent='Verificando...';
+  showStatus(status,'Verificando si ya tienes entrada...','');
+  
+  try{
+    const r=await fetch(`${API_BASE}?action=checkEmail&email=${encodeURIComponent(email)}&eventoId=${encodeURIComponent(activeEvent.id)}&t=${Date.now()}`);
+    const res=await r.json();
+    
+    if(res.exists){
+      // Ya existe
+      currentEmail=email;
+      document.getElementById('stepEmail').classList.add('hidden');
+      document.getElementById('stepExists').classList.remove('hidden');
+      document.getElementById('existsId').textContent=res.id;
+      document.getElementById('existsNombre').textContent=res.nombres+' '+res.apellidos+' - '+res.estudiante;
+    }else{
+      // No existe, mostrar formulario
+      currentEmail=email;
+      document.getElementById('verifiedEmail').textContent=email;
+      document.getElementById('emailFinal').value=email;
+      document.getElementById('eventoId').value=activeEvent.id;
+      document.getElementById('stepEmail').classList.add('hidden');
+      document.getElementById('stepForm').classList.remove('hidden');
+    }
+  }catch(e){
+    showStatus(status,'No pudimos verificar, intenta de nuevo','error');
+  }finally{
+    document.getElementById('btnVerificar').disabled=false;
+    document.getElementById('btnVerificar').textContent='Continuar';
+  }
+});
+
+document.getElementById('btnCambiarCorreo').addEventListener('click', ()=>{
+  document.getElementById('stepForm').classList.add('hidden');
+  document.getElementById('stepEmail').classList.remove('hidden');
+  document.getElementById('emailCheck').value=currentEmail;
+});
+
+document.getElementById('btnOtroCorreo').addEventListener('click', ()=>{
+  document.getElementById('stepExists').classList.add('hidden');
+  document.getElementById('stepEmail').classList.remove('hidden');
+  document.getElementById('emailCheck').value='';
+});
+
+document.getElementById('btnReenviar').addEventListener('click', async ()=>{
+  const status=document.getElementById('resendStatus');
+  showStatus(status,'Reenviando tu ticket...','');
+  try{
+    const r=await fetch(API_BASE,{method:'POST', body:JSON.stringify({action:'resend', email:currentEmail, eventoId:activeEvent.id}), headers:{'Content-Type':'text/plain;charset=utf-8'}});
+    const res=await r.json();
+    if(res.status==='OK') showStatus(status,'¡Listo! Revisa tu correo, te enviamos tu entrada '+res.id,'success');
+    else showStatus(status,res.message||'No pudimos reenviar','error');
+  }catch(e){ showStatus(status,'Error de conexión','error'); }
+});
+
+const form=document.getElementById('registrationForm');
 form.addEventListener('submit', async (e)=>{
   e.preventDefault();
-  const data={action:'register', eventoId:activeEvent.id, nombres:document.getElementById('nombres').value.trim(), apellidos:document.getElementById('apellidos').value.trim(), nombreEstudiante:document.getElementById('nombreEstudiante').value.trim(), gradoSeccion:document.getElementById('gradoSeccion').value.trim(), parentesco:document.getElementById('parentesco').value.trim(), email:document.getElementById('email').value.trim()};
-  btn.disabled=true; btn.textContent='Reservando...'; showStatus('Estamos reservando tu entrada...','loading');
+  const status=document.getElementById('formStatus');
+  const data={action:'register', eventoId:activeEvent.id, nombres:document.getElementById('nombres').value.trim(), apellidos:document.getElementById('apellidos').value.trim(), nombreEstudiante:document.getElementById('nombreEstudiante').value.trim(), gradoSeccion:document.getElementById('gradoSeccion').value.trim(), parentesco:document.getElementById('parentesco').value.trim(), email:document.getElementById('emailFinal').value.trim()};
+  document.getElementById('btnEnviar').disabled=true;
+  document.getElementById('btnEnviar').textContent='Reservando...';
+  showStatus(status,'Reservando tu entrada...','');
   try{
     const r=await fetch(API_BASE,{method:'POST', body:JSON.stringify(data), headers:{'Content-Type':'text/plain;charset=utf-8'}});
     const res=await r.json();
-    if(res.status==='OK'){ showStatus('¡Listo! Revisa tu correo '+res.email+'. Te enviamos tu ticket '+res.id,'success'); form.reset(); document.getElementById('eventoId').value=activeEvent.id; }
-    else if(res.status==='CORREO_DUPLICADO'){ showStatus('Ya tienes una entrada para este evento con ese correo. Revisa tu bandeja de entrada.','error'); }
-    else if(res.status==='NO_HAY_EVENTO'){ showStatus('Por ahora no hay inscripciones abiertas.','error'); }
-    else{ showStatus(res.message||'No pudimos completar tu registro','error'); }
-  }catch(err){ showStatus('Tuvimos un problema de conexión, intenta de nuevo','error'); } finally{ btn.disabled=false; btn.textContent='Reservar mi entrada'; }
+    if(res.status==='OK'){ showStatus(status,'¡Reserva lista! Revisa tu correo '+res.email+' - Te enviamos tu ticket '+res.id,'success'); form.reset(); }
+    else if(res.status==='CORREO_DUPLICADO'){ showStatus(status,'Ya tienes una entrada con ese correo para este evento. Revisa tu bandeja.','error'); }
+    else{ showStatus(status,res.message||'No pudimos completar','error'); }
+  }catch(err){ showStatus(status,'Error de conexión','error'); } finally{ document.getElementById('btnEnviar').disabled=false; document.getElementById('btnEnviar').textContent='Reservar mi entrada'; }
 });
+
 window.addEventListener('load', loadActiveEvent);
 </script>
 </body>
