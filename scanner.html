@@ -4,61 +4,103 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
 <title>Escáner - Feria San Martín</title>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/minified/html5-qrcode.min.js"></script>
 <style>
 :root{color-scheme:dark;font-family:'Segoe UI',Arial,sans-serif;background:#020617;color:#f8fafc}
 *{box-sizing:border-box} body{margin:0;min-height:100vh;display:flex;justify-content:center;padding:16px;background:radial-gradient(circle at top, rgba(56,189,248,0.14), transparent 28%),linear-gradient(180deg,#020617 0%,#070b1b 100%)}
 .page{width:min(100%,700px);display:grid;gap:18px;background:rgba(12,18,38,0.92);border:1px solid rgba(255,255,255,0.08);border-radius:28px;padding:24px}
-#reader{width:100%;min-height:52vh;border-radius:24px;overflow:hidden;background:#07101f;border:1px solid rgba(148,163,184,0.18)}
+#reader{width:100%;min-height:48vh;border-radius:24px;overflow:hidden;background:#07101f;border:1px solid rgba(148,163,184,0.18);position:relative}
 #reader video{width:100%!important;height:100%!important;object-fit:cover}
-.status-text{margin-top:14px;padding:18px 20px;border-radius:18px;font-size:1rem;font-weight:700} .status-text.success{color:#0f172a;background:#a7f3d0} .status-text.error{color:#f8fafc;background:#dc2626} .status-text.pending{color:#fff;background:linear-gradient(135deg,rgba(56,189,248,0.95),rgba(14,165,233,0.9))}
-button{border:none;border-radius:16px;padding:14px 22px;font-weight:700;cursor:pointer} .primary{background:linear-gradient(135deg,#38bdf8,#0ea5e9);color:#020617} .secondary{background:rgba(255,255,255,0.08);color:#e2e8f0}
+.status-text{padding:18px 20px;border-radius:18px;font-weight:700} .success{color:#0f172a;background:#a7f3d0} .error{color:#fff;background:#dc2626} .pending{color:#fff;background:linear-gradient(135deg,#38bdf8,#0ea5e9)}
+button{border:none;border-radius:16px;padding:16px 22px;font-weight:800;cursor:pointer;font-size:1rem} .primary{background:linear-gradient(135deg,#38bdf8,#0ea5e9);color:#020617;width:100%} .secondary{background:rgba(255,255,255,0.08);color:#e2e8f0}
+#debug{font-size:0.8rem;color:#64748b;white-space:pre-wrap}
 </style>
-<script src="https://unpkg.com/html5-qrcode@2.3.8/minified/html5-qrcode.min.js"></script>
 </head>
 <body>
 <main class="page">
 <h1 style="margin:0">Escáner de Ingreso</h1>
-<p style="color:#94a3b8">Apunta al QR. Al validar, se guarda en Sheets y activa el display de la tele automáticamente.</p>
-<section id="reader"></section>
-<div id="message" class="status-text pending">Iniciando cámara...</div>
-<div style="display:flex;gap:12px;margin-top:12px"><button id="restart" class="secondary">Reiniciar</button></div>
-<p style="color:#64748b;font-size:0.9rem">API: GitHub Pages → Google Sheets</p>
+<p style="color:#94a3b8;margin:0">En GitHub Pages si funciona, pero el navegador exige que toques un botón para dar permiso de cámara.</p>
+
+<div id="reader"></div>
+
+<button id="startBtn" class="primary">📷 Tocar para activar cámara</button>
+
+<div id="message" class="status-text pending">Esperando activación...</div>
+<div id="debug"></div>
+
+<div style="display:flex;gap:12px"><button id="switchBtn" class="secondary" style="display:none">🔄 Cambiar cámara</button><button id="restart" class="secondary">Reiniciar</button></div>
 </main>
+
 <script>
-const API_BASE = "https://script.google.com/a/macros/colegiosanmartin.edu.pe/s/AKfycbyNv8GsbBGB-w45ZkPIoV2Erwx9VATaQNy7Uz4kKLHyIjP3ig9arOdrT6NixI4auIv8Cg/exec";
-let html5QrCode; let scanActive=false;
+const API_BASE = "https://script.google.com/macros/s/AKfycbyNv8GsbBGB-w45ZkPIoV2Erwx9VATaQNy7Uz4kKLHyIjP3ig9arOdrT6NixI4auIv8Cg/exec";
+let html5QrCode = null;
+let currentFacing = "environment";
+let scanning = false;
 const msgEl = document.getElementById('message');
+const debugEl = document.getElementById('debug');
+const startBtn = document.getElementById('startBtn');
+const switchBtn = document.getElementById('switchBtn');
+
+function log(t){ debugEl.textContent += "\n" + t; }
 function updateStatus(t,c){ msgEl.textContent=t; msgEl.className='status-text '+c; }
+
 async function startScanner(){
-  updateStatus('Solicitando cámara...','pending');
-  html5QrCode = new Html5Qrcode('reader');
+  if(scanning) return;
+  updateStatus('Solicitando permiso de cámara...','pending');
+  debugEl.textContent='';
   try{
-    const cams = await Html5Qrcode.getCameras();
-    const camId = cams.length? cams[0].id : {facingMode:{ideal:"environment"}};
-    await html5QrCode.start(camId, {fps:15, qrbox:{width:250,height:250}}, onScanSuccess);
+    if(html5QrCode){ try{ await html5QrCode.stop(); }catch(e){} }
+    html5QrCode = new Html5Qrcode('reader');
+    // NO usamos getCameras() antes de permiso, eso bloquea en GitHub Pages
+    const config = { fps:15, qrbox:{width:260,height:260} };
+    const cameraConfig = { facingMode: currentFacing };
+    log('Intentando con '+currentFacing);
+    await html5QrCode.start(cameraConfig, config, onScanSuccess, ()=>{});
+    scanning=true;
+    startBtn.style.display='none';
+    switchBtn.style.display='inline-block';
     updateStatus('Cámara activa. Apunta al QR','pending');
+    // fix iOS
+    setTimeout(()=>{ document.querySelectorAll('#reader video').forEach(v=>{ v.setAttribute('playsinline','true'); v.muted=true; }); }, 500);
   }catch(err){
-    console.error(err);
-    updateStatus('Error cámara: '+err.name+'. Usa HTTPS y permite cámara.','error');
+    console.error(err); log('ERROR: '+err.name+' - '+err.message);
+    if(err.name==='NotAllowedError'){
+      updateStatus('Permiso denegado. Dale permiso de cámara al navegador y recarga.','error');
+    }else if(err.name==='NotFoundError'){
+      updateStatus('No se encontró cámara.','error');
+    }else if(currentFacing==='environment'){
+      log('Reintentando con frontal...');
+      currentFacing='user';
+      try{
+        await html5QrCode.start({facingMode: currentFacing}, {fps:15, qrbox:{width:250,height:250}}, onScanSuccess);
+        scanning=true; startBtn.style.display='none'; updateStatus('Cámara frontal activa','pending');
+        return;
+      }catch(e2){ log('Fallo frontal: '+e2.message); }
+      updateStatus('No se pudo iniciar cámara: '+err.message,'error');
+    }else{
+      updateStatus('Error: '+err.name+' '+err.message,'error');
+    }
   }
 }
+
 async function onScanSuccess(decoded){
   if(!decoded) return;
   updateStatus('QR: '+decoded+' - Verificando en Sheets...','pending');
   try{ await html5QrCode.pause(); }catch(e){}
   try{
-    const r = await fetch(`${API_BASE}?action=check&id=${encodeURIComponent(decoded.trim())}`);
+    const r = await fetch(`${API_BASE}?action=check&id=${encodeURIComponent(decoded.trim())}&t=${Date.now()}`);
     const res = await r.json();
+    log('Respuesta: '+JSON.stringify(res));
     if(res.status==='OK'){ updateStatus('✅ INGRESO: '+res.data.nombres+' '+res.data.apellidos,'success'); }
-    else if(res.status==='DUPLICADO'){ updateStatus('⚠️ QR YA USADO: '+res.data.nombres,'error'); }
-    else{ updateStatus('🚫 INVITACIÓN NO VÁLIDA','error'); }
-  }catch(e){
-    updateStatus('Error de conexión con Sheets: '+e.message,'error');
-  }
-  setTimeout(()=>{ try{ html5QrCode.resume(); updateStatus('Cámara activa. Apunta al siguiente QR','pending'); }catch(e){} }, 3000);
+    else if(res.status==='DUPLICADO'){ updateStatus('⚠️ YA USADO: '+(res.data?.nombres||''),'error'); }
+    else{ updateStatus('🚫 NO VÁLIDO','error'); }
+  }catch(e){ log('Fetch error: '+e.message); updateStatus('Error conexión Sheets: '+e.message,'error'); }
+  setTimeout(()=>{ try{ html5QrCode.resume(); updateStatus('Listo para siguiente QR','pending'); }catch(e){} }, 2500);
 }
-document.getElementById('restart').addEventListener('click', ()=>{ try{html5QrCode.stop()}catch(e){}; startScanner(); });
-window.addEventListener('load', startScanner);
+
+startBtn.addEventListener('click', startScanner);
+document.getElementById('restart').addEventListener('click', async ()=>{ try{ await html5QrCode.stop(); }catch(e){}; scanning=false; startBtn.style.display='block'; updateStatus('Reiniciado','pending'); });
+switchBtn.addEventListener('click', async ()=>{ currentFacing = currentFacing==='environment'?'user':'environment'; scanning=false; await startScanner(); });
 </script>
 </body>
 </html>
