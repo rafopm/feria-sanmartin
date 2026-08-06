@@ -3,99 +3,65 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Registro Invitados - Colegio San Martín</title>
+<title>Registro - Colegio San Martín</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="config.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
-<script>
-tailwind.config = {
-  theme: { extend: { fontFamily: { sans: ['Plus Jakarta Sans','Inter','sans-serif'] } } }
-}
-</script>
-<style>
-  body{font-family:'Plus Jakarta Sans',sans-serif}
-  .glass{backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);}
-</style>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&display=swap" rel="stylesheet">
+<style>body{font-family:'Plus Jakarta Sans',sans-serif}</style>
 </head>
-<body class="min-h-screen bg-[#020617] text-white relative overflow-x-hidden">
-  <!-- Backgrounds -->
-  <div class="fixed inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(56,189,248,0.15),transparent_30%),radial-gradient(circle_at_80%_80%,rgba(168,85,247,0.12),transparent_25%),linear-gradient(180deg,#020617_0%,#0a0f1e_100%)] pointer-events-none"></div>
-  <div class="fixed top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-sky-500/10 rounded-full blur-[120px] pointer-events-none"></div>
+<body class="min-h-screen bg-[#020617] text-white flex items-center justify-center p-4 relative">
+  <div class="fixed inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(56,189,248,0.12),transparent_35%),radial-gradient(circle_at_80%_80%,rgba(168,85,247,0.1),transparent_30%)] pointer-events-none"></div>
 
-  <!-- Loading -->
-  <div id="loadingState" class="relative z-10 min-h-screen flex flex-col items-center justify-center p-6">
-    <div class="relative">
-      <div class="w-20 h-20 border-4 border-white/10 rounded-full"></div>
-      <div class="absolute inset-0 w-20 h-20 border-4 border-sky-400 border-t-transparent rounded-full animate-spin"></div>
-      <div class="absolute inset-2 w-12 h-12 m-2 border-4 border-violet-400 border-t-transparent rounded-full animate-spin [animation-direction:reverse]"></div>
-    </div>
-    <p class="mt-6 text-sky-200 font-bold tracking-wide animate-pulse">Cargando evento activo...</p>
-    <p class="text-white/40 text-sm mt-1">Conectado a Google Sheets</p>
+  <!-- Cargando - amigable -->
+  <div id="loadingState" class="relative z-10 flex flex-col items-center justify-center py-20">
+    <div class="w-12 h-12 border-4 border-white/10 border-t-sky-400 rounded-full animate-spin"></div>
+    <p class="mt-4 font-bold text-white">Conectando...</p>
+    <p class="text-white/40 text-sm mt-1">Estamos preparando todo para ti</p>
   </div>
 
-  <!-- No evento -->
-  <div id="noEventState" class="hidden relative z-10 min-h-screen flex items-center justify-center p-6">
-    <div class="max-w-lg w-full bg-white/[0.04] border border-white/10 rounded-[32px] p-10 text-center glass shadow-2xl">
-      <div class="w-24 h-24 mx-auto rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-4xl mb-6">⚠️</div>
-      <h2 class="text-3xl font-extrabold">No hay eventos activos</h2>
-      <p class="text-white/60 mt-3 leading-relaxed">Ve a tu hoja <span class="text-white font-semibold">Eventos</span> y marca <span class="text-amber-300 font-bold">Activo = TRUE</span> en el evento que quieres habilitar. Solo el evento en TRUE se mostrará.</p>
-      <div class="mt-6 inline-flex items-center gap-2 text-xs text-white/30 bg-white/5 px-4 py-2 rounded-full">API: <span id="apiUrlNoEvent" class="truncate max-w-[200px]"></span></div>
-    </div>
+  <!-- Sin evento -->
+  <div id="noEventState" class="hidden relative z-10 max-w-md w-full bg-white/[0.05] border border-white/10 rounded-[28px] p-8 text-center backdrop-blur-xl">
+    <div class="text-5xl mb-4">🎟️</div>
+    <h2 class="text-2xl font-extrabold">Aún no hay eventos disponibles</h2>
+    <p class="text-white/60 mt-3 text-sm leading-relaxed">En este momento no tenemos inscripciones abiertas. Vuelve pronto, estamos preparando algo especial para ti.</p>
   </div>
 
-  <!-- Main -->
-  <div id="mainContent" class="hidden relative z-10 min-h-screen flex items-center justify-center p-4 md:p-8">
-    <div class="w-full max-w-5xl grid lg:grid-cols-[1.1fr_0.9fr] gap-6">
-      
-      <!-- Left - Evento TRUE -->
-      <div class="bg-gradient-to-br from-white/[0.07] to-white/[0.03] border border-white/10 rounded-[32px] p-8 md:p-10 glass shadow-[0_32px_80px_rgba(0,0,0,0.4)] relative overflow-hidden">
-        <div class="absolute -top-24 -right-24 w-72 h-72 bg-sky-500/20 rounded-full blur-[60px] pointer-events-none"></div>
-        <div id="eventHeader"></div>
-        
-        <div class="mt-8 grid grid-cols-3 gap-3">
-          <div class="bg-white/[0.04] border border-white/5 rounded-2xl p-4">
-            <p class="text-white/40 text-[10px] tracking-widest uppercase">Estado</p>
-            <p class="text-emerald-300 font-bold mt-1 flex items-center gap-2"><span class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></span> ACTIVO</p>
-          </div>
-          <div class="bg-white/[0.04] border border-white/5 rounded-2xl p-4">
-            <p class="text-white/40 text-[10px] tracking-widest uppercase">ID Evento</p>
-            <p id="eventIdBadge" class="font-bold mt-1 text-white"></p>
-          </div>
-          <div class="bg-white/[0.04] border border-white/5 rounded-2xl p-4">
-            <p class="text-white/40 text-[10px] tracking-widest uppercase">Fecha</p>
-            <p id="eventDate" class="font-bold mt-1 text-white"></p>
-          </div>
+  <!-- Evento activo - Solo info necesaria para usuario -->
+  <div id="mainContent" class="hidden relative z-10 w-full max-w-5xl">
+    <div class="grid lg:grid-cols-2 gap-6">
+      <!-- Info evento -->
+      <div class="bg-gradient-to-br from-white/[0.06] to-white/[0.03] border border-white/10 rounded-[32px] p-8 backdrop-blur-xl">
+        <div id="eventBadge" class="inline-flex bg-emerald-500/15 text-emerald-300 border border-emerald-500/20 px-3 py-1 rounded-full text-xs font-bold">● Inscripciones abiertas</div>
+        <h1 id="eventNombre" class="text-4xl font-extrabold mt-4 leading-tight"></h1>
+        <p id="eventDesc" class="text-white/60 mt-3"></p>
+        <p id="eventFecha" class="text-white/40 text-sm mt-2"></p>
+        <div class="mt-6 bg-white/[0.04] border border-white/5 rounded-2xl p-5">
+          <p id="eventMensaje" class="text-white text-[15px] leading-relaxed"></p>
         </div>
-
-        <div class="mt-8 bg-sky-500/[0.08] border border-sky-500/20 rounded-2xl p-5 relative overflow-hidden">
-          <div class="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-sky-400/50 to-transparent"></div>
-          <p class="text-sky-200 text-xs font-bold tracking-widest uppercase">💬 Mensaje de bienvenida diferenciado</p>
-          <p id="eventWelcomeMsg" class="text-white text-lg leading-relaxed mt-2 font-medium"></p>
-          <p class="text-sky-300/50 text-[11px] mt-3">Este mensaje se usará en la pantalla grande y en la voz</p>
+        <div class="mt-6 flex items-center gap-2 text-xs text-white/30">
+          <span>🔒</span><span>Tu información está segura</span>
         </div>
       </div>
 
-      <!-- Right - Form -->
-      <div class="bg-[#0e1428]/80 border border-white/10 rounded-[32px] p-8 md:p-10 glass shadow-2xl">
-        <h2 class="text-2xl font-extrabold tracking-tight">Registro de invitado</h2>
-        <p class="text-white/50 text-sm mt-2">Recibirás QR por correo. Llegada desordenada OK.</p>
-        
-        <form id="registrationForm" class="mt-8 grid gap-5">
+      <!-- Formulario -->
+      <div class="bg-[#0e1428]/90 border border-white/10 rounded-[32px] p-8 backdrop-blur-xl">
+        <h2 class="text-2xl font-bold">Reserva tu entrada</h2>
+        <p class="text-white/50 text-sm mt-1">Te enviaremos tu ticket con código QR a tu correo</p>
+        <form id="registrationForm" class="mt-6 grid gap-4">
           <input type="hidden" id="eventoId">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <label class="group"><span class="text-[11px] tracking-widest uppercase text-white/50 group-focus-within:text-sky-300">Nombres</span><input id="nombres" required class="mt-2 w-full rounded-2xl bg-white/[0.06] border border-white/10 px-4 py-3.5 text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-sky-400/50 focus:border-sky-400/50 transition" placeholder="María Fernanda"></label>
-            <label class="group"><span class="text-[11px] tracking-widest uppercase text-white/50 group-focus-within:text-sky-300">Apellidos</span><input id="apellidos" required class="rounded-2xl bg-white/[0.06] border border-white/10 px-4 py-3.5 text-white mt-2" placeholder="López García"></label>
+          <div class="grid grid-cols-2 gap-3">
+            <label class="text-sm"><span class="text-white/60">Nombres</span><input id="nombres" required class="mt-1.5 w-full rounded-2xl bg-white/[0.06] border border-white/10 px-4 py-3.5 text-white placeholder:text-white/20" placeholder="María"></label>
+            <label class="text-sm"><span class="text-white/60">Apellidos</span><input id="apellidos" required class="mt-1.5 w-full rounded-2xl bg-white/[0.06] border border-white/10 px-4 py-3.5 text-white" placeholder="López"></label>
           </div>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <label class="group"><span class="text-[11px] tracking-widest uppercase text-white/50">Nombre Estudiante</span><input id="nombreEstudiante" required class="mt-2 w-full rounded-2xl bg-white/[0.06] border border-white/10 px-4 py-3.5 text-white" placeholder="Juan López"></label>
-            <label class="group"><span class="text-[11px] tracking-widest uppercase text-white/50">Grado y Sección</span><input id="gradoSeccion" required class="mt-2 w-full rounded-2xl bg-white/[0.06] border border-white/10 px-4 py-3.5 text-white" placeholder="3° A"></label>
+          <label class="text-sm"><span class="text-white/60">Nombre del estudiante</span><input id="nombreEstudiante" required class="mt-1.5 w-full rounded-2xl bg-white/[0.06] border border-white/10 px-4 py-3.5 text-white" placeholder="Juan López"></label>
+          <div class="grid grid-cols-2 gap-3">
+            <label class="text-sm"><span class="text-white/60">Grado y sección</span><input id="gradoSeccion" required class="mt-1.5 w-full rounded-2xl bg-white/[0.06] border border-white/10 px-4 py-3.5 text-white" placeholder="3° A"></label>
+            <label class="text-sm"><span class="text-white/60">Parentesco</span><input id="parentesco" required class="mt-1.5 w-full rounded-2xl bg-white/[0.06] border border-white/10 px-4 py-3.5 text-white" placeholder="Mamá"></label>
           </div>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <label class="group"><span class="text-[11px] tracking-widest uppercase text-white/50">Parentesco</span><input id="parentesco" required class="mt-2 w-full rounded-2xl bg-white/[0.06] border border-white/10 px-4 py-3.5 text-white" placeholder="Mamá / Papá"></label>
-            <label class="group"><span class="text-[11px] tracking-widest uppercase text-white/50">Correo</span><input id="email" type="email" required class="mt-2 w-full rounded-2xl bg-white/[0.06] border border-white/10 px-4 py-3.5 text-white" placeholder="correo@gmail.com"></label>
-          </div>
-          <button id="btnEnviar" type="submit" class="mt-2 w-full bg-gradient-to-br from-sky-400 to-cyan-400 text-slate-950 font-extrabold py-4 rounded-2xl shadow-[0_12px_24px_rgba(56,189,248,0.3)] hover:shadow-[0_16px_32px_rgba(56,189,248,0.4)] hover:scale-[1.01] active:scale-[0.99] transition-all">Enviar inscripción →</button>
-          <div id="statusMessage" class="hidden"></div>
+          <label class="text-sm"><span class="text-white/60">Correo electrónico</span><input id="email" type="email" required class="mt-1.5 w-full rounded-2xl bg-white/[0.06] border border-white/10 px-4 py-3.5 text-white" placeholder="tu@correo.com"></label>
+          <p class="text-[11px] text-white/30">Usaremos tu correo solo para enviarte la entrada. Si ya te registraste a este evento, no podrás hacerlo de nuevo.</p>
+          <button id="btnEnviar" type="submit" class="w-full bg-white text-slate-900 font-extrabold py-4 rounded-2xl hover:bg-slate-100 transition">Reservar mi entrada</button>
+          <div id="statusMessage" class="hidden p-4 rounded-2xl text-sm"></div>
         </form>
       </div>
     </div>
@@ -105,7 +71,6 @@ tailwind.config = {
 let activeEvent=null;
 async function loadActiveEvent(){
   const loading=document.getElementById('loadingState'), noEvent=document.getElementById('noEventState'), main=document.getElementById('mainContent');
-  document.getElementById('apiUrlNoEvent').textContent = API_BASE.slice(0,60)+'...';
   try{
     const r=await fetch(`${API_BASE}?action=getEvents&t=${Date.now()}`,{cache:'no-store'});
     const res=await r.json();
@@ -114,39 +79,33 @@ async function loadActiveEvent(){
     if(events.length===0){ noEvent.classList.remove('hidden'); return; }
     activeEvent=events[0];
     document.getElementById('eventoId').value=activeEvent.id;
-    document.getElementById('eventIdBadge').textContent=activeEvent.id;
-    document.getElementById('eventDate').textContent=activeEvent.fecha||'--';
-    document.getElementById('eventHeader').innerHTML=`
-      <span class="inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 px-3 py-1.5 rounded-full text-[11px] font-bold tracking-widest">● EVENTO ACTIVO</span>
-      <h1 class="text-[2.6rem] md:text-5xl font-extrabold tracking-tight leading-[0.95] mt-4">${activeEvent.nombre}</h1>
-      <p class="text-white/60 mt-4 leading-relaxed text-[15px]">${activeEvent.descripcion||'Evento del Colegio San Martín'}</p>
-    `;
-    document.getElementById('eventWelcomeMsg').textContent='"'+(activeEvent.mensaje||'¡Bienvenidos a nuestro evento!')+'"';
+    document.getElementById('eventNombre').textContent=activeEvent.nombre;
+    document.getElementById('eventDesc').textContent=activeEvent.descripcion||'';
+    document.getElementById('eventFecha').textContent=activeEvent.fecha ? '📅 '+activeEvent.fecha : '';
+    document.getElementById('eventMensaje').textContent=activeEvent.mensaje||'¡Te esperamos con mucha alegría!';
     main.classList.remove('hidden');
-  }catch(e){
-    loading.innerHTML=`<div class="bg-red-500/10 border border-red-500/20 rounded-2xl p-6 text-red-200 max-w-md text-center"><p class="font-bold">Error cargando eventos</p><p class="text-sm opacity-70 mt-2">${e.message}</p><p class="text-xs mt-4 opacity-50 break-all">${API_BASE}</p></div>`;
-  }
+  }catch(e){ loading.innerHTML=`<div class="bg-white/[0.05] border border-white/10 rounded-2xl p-6 text-center max-w-sm"><p class="font-bold">No pudimos conectar</p><p class="text-white/50 text-sm mt-2">Intenta recargar la página</p></div>`; }
 }
 const form=document.getElementById('registrationForm'), statusEl=document.getElementById('statusMessage'), btn=document.getElementById('btnEnviar');
 function showStatus(t,type){
   statusEl.classList.remove('hidden');
-  const base="mt-4 p-4 rounded-2xl text-sm border";
-  if(type==='success') statusEl.className=base+" bg-emerald-500/10 border-emerald-500/20 text-emerald-200 block";
-  else if(type==='error') statusEl.className=base+" bg-red-500/10 border-red-500/20 text-red-200 block";
-  else statusEl.className=base+" bg-sky-500/10 border-sky-500/20 text-sky-200 block";
+  if(type==='success') statusEl.className='p-4 rounded-2xl text-sm bg-emerald-500/10 border border-emerald-500/20 text-emerald-200';
+  else if(type==='error') statusEl.className='p-4 rounded-2xl text-sm bg-red-500/10 border border-red-500/20 text-red-200';
+  else statusEl.className='p-4 rounded-2xl text-sm bg-sky-500/10 border border-sky-500/20 text-sky-200';
   statusEl.textContent=t;
 }
 form.addEventListener('submit', async (e)=>{
   e.preventDefault();
-  if(!activeEvent){ showStatus('No hay evento activo','error'); return; }
   const data={action:'register', eventoId:activeEvent.id, nombres:document.getElementById('nombres').value.trim(), apellidos:document.getElementById('apellidos').value.trim(), nombreEstudiante:document.getElementById('nombreEstudiante').value.trim(), gradoSeccion:document.getElementById('gradoSeccion').value.trim(), parentesco:document.getElementById('parentesco').value.trim(), email:document.getElementById('email').value.trim()};
-  btn.disabled=true; btn.textContent='Enviando...'; showStatus('Guardando para '+activeEvent.nombre+'...','loading');
+  btn.disabled=true; btn.textContent='Reservando...'; showStatus('Estamos reservando tu entrada...','loading');
   try{
     const r=await fetch(API_BASE,{method:'POST', body:JSON.stringify(data), headers:{'Content-Type':'text/plain;charset=utf-8'}});
     const res=await r.json();
-    if(res.status==='OK'){ showStatus(`✅ ${res.evento.nombre} - ID: ${res.id} - Revisa ${res.email}`,'success'); form.reset(); document.getElementById('eventoId').value=activeEvent.id; }
-    else showStatus('Error: '+(res.message||''),'error');
-  }catch(err){ showStatus('Error: '+err.message,'error'); } finally{ btn.disabled=false; btn.textContent='Enviar inscripción →'; }
+    if(res.status==='OK'){ showStatus('¡Listo! Revisa tu correo '+res.email+'. Te enviamos tu ticket '+res.id,'success'); form.reset(); document.getElementById('eventoId').value=activeEvent.id; }
+    else if(res.status==='CORREO_DUPLICADO'){ showStatus('Ya tienes una entrada para este evento con ese correo. Revisa tu bandeja de entrada.','error'); }
+    else if(res.status==='NO_HAY_EVENTO'){ showStatus('Por ahora no hay inscripciones abiertas.','error'); }
+    else{ showStatus(res.message||'No pudimos completar tu registro','error'); }
+  }catch(err){ showStatus('Tuvimos un problema de conexión, intenta de nuevo','error'); } finally{ btn.disabled=false; btn.textContent='Reservar mi entrada'; }
 });
 window.addEventListener('load', loadActiveEvent);
 </script>

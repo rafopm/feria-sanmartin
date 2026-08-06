@@ -3,111 +3,62 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<title>Pantalla Bienvenida - Feria</title>
+<title>Bienvenida</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="config.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800;900&display=swap" rel="stylesheet">
-<style>
-  body{font-family:'Plus Jakarta Sans',sans-serif}
-  @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
-  .float{animation:float 4s ease-in-out infinite}
-</style>
+<style>body{font-family:'Plus Jakarta Sans',sans-serif}</style>
 </head>
 <body class="min-h-screen bg-[#020617] text-white overflow-hidden flex items-center justify-center relative">
-  <div class="fixed inset-0 bg-[radial-gradient(circle_at_20%_30%,rgba(56,189,248,0.15),transparent_35%),radial-gradient(circle_at_80%_70%,rgba(168,85,247,0.12),transparent_30%),linear-gradient(180deg,#020617,#0a0f1e)]"></div>
-  <div class="fixed top-[10%] left-[20%] w-96 h-96 bg-sky-500/10 rounded-full blur-[80px] pointer-events-none"></div>
-  <div class="fixed bottom-[10%] right-[15%] w-[500px] h-[500px] bg-violet-500/10 rounded-full blur-[100px] pointer-events-none"></div>
-
+  <div class="fixed inset-0 bg-[radial-gradient(circle_at_20%_30%,rgba(56,189,248,0.12),transparent_35%),radial-gradient(circle_at_80%_70%,rgba(168,85,247,0.1),transparent_30%)]"></div>
   <div class="relative w-full h-screen p-6 md:p-10 flex items-center justify-center">
-    <div class="w-full max-w-[1280px] min-h-[560px] bg-white/[0.04] border border-white/10 rounded-[40px] p-8 md:p-12 backdrop-blur-2xl shadow-[0_40px_120px_rgba(0,0,0,0.5)] relative overflow-hidden">
-      
-      <!-- Top bar -->
+    <div class="w-full max-w-6xl bg-white/[0.04] border border-white/10 rounded-[40px] p-8 md:p-12 backdrop-blur-2xl shadow-2xl relative overflow-hidden min-h-[560px] flex flex-col">
       <div class="flex justify-between items-start">
-        <div id="eventTag" class="inline-flex items-center gap-2 bg-violet-500/15 border border-violet-500/30 text-violet-200 px-4 py-2 rounded-full text-xs font-bold tracking-widest">CARGANDO EVENTO...</div>
-        <button id="voiceToggle" class="bg-white/10 border border-white/10 px-4 py-2 rounded-full text-xs font-bold hover:bg-white/15 transition">🔇 Voz desactivada</button>
+        <div id="eventTag" class="bg-white/10 px-4 py-2 rounded-full text-xs font-bold text-white/60">Conectando...</div>
+        <button id="voiceToggle" class="bg-white/10 px-4 py-2 rounded-full text-xs font-bold">🔇 Sonido</button>
       </div>
-
-      <!-- Overlay voz -->
       <div id="voiceOverlay" class="absolute inset-0 bg-[#020617]/90 backdrop-blur-xl z-20 grid place-items-center rounded-[40px]">
-        <div class="text-center max-w-md p-8 bg-white/[0.04] border border-white/10 rounded-[32px]">
-          <div class="w-20 h-20 mx-auto bg-sky-500/15 rounded-full flex items-center justify-center text-3xl mb-4">🔊</div>
-          <h2 class="text-3xl font-black">Activar bienvenida con voz</h2>
-          <p class="text-white/60 mt-3 text-sm">El navegador bloquea el audio hasta que toques una vez. Luego quedará activo.</p>
-          <button id="enableVoice" class="mt-6 w-full bg-gradient-to-br from-sky-400 to-cyan-400 text-slate-950 font-black py-4 rounded-2xl">Activar voz y sonido</button>
+        <div class="text-center max-w-sm p-8 bg-white/[0.04] border border-white/10 rounded-[32px]">
+          <div class="text-4xl mb-4">🔊</div>
+          <h2 class="text-2xl font-black">Activa el sonido</h2>
+          <p class="text-white/50 text-sm mt-2">Necesitamos tu permiso para dar la bienvenida con voz</p>
+          <button id="enableVoice" class="mt-6 w-full bg-white text-slate-900 font-black py-4 rounded-2xl">Activar</button>
         </div>
       </div>
-
-      <!-- Waiting -->
-      <div id="waitingState" class="mt-24 md:mt-32 text-center">
-        <div class="inline-flex items-center gap-3 bg-white/[0.04] border border-white/10 px-5 py-2 rounded-full text-xs text-white/50">
-          <span class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></span> EN VIVO - Conectado a Sheets
-        </div>
-        <h3 class="mt-8 text-4xl md:text-6xl font-black tracking-tight leading-[0.9]">Esperando<br><span class="text-transparent bg-clip-text bg-gradient-to-r from-sky-300 to-violet-300">invitados</span></h3>
-        <p class="text-white/40 mt-6 text-lg">La pantalla sorpresa se activa automáticamente</p>
-        <p id="apiStatus" class="text-white/20 text-xs mt-8 font-mono">Conectado</p>
-        <div id="queueBadge" class="hidden mt-6 inline-flex bg-sky-500/10 border border-sky-500/20 text-sky-200 px-5 py-2.5 rounded-full text-sm font-bold"></div>
+      <div id="waitingState" class="flex-1 flex flex-col items-center justify-center text-center py-20">
+        <h3 class="text-5xl md:text-6xl font-black leading-[0.9]">Te estamos<br><span class="text-transparent bg-clip-text bg-gradient-to-r from-sky-300 to-violet-300">esperando</span></h3>
+        <p class="text-white/40 mt-6">Tu bienvenida aparecerá aquí automáticamente</p>
+        <div id="queueBadge" class="hidden mt-6 bg-sky-500/10 border border-sky-500/20 text-sky-200 px-5 py-2.5 rounded-full text-sm font-bold"></div>
       </div>
-
-      <!-- Welcome -->
-      <div id="welcomeCard" class="hidden mt-16 md:mt-20">
-        <div class="flex flex-col lg:flex-row gap-10 items-center">
-          <div class="flex-1">
-            <div class="inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 px-4 py-1.5 rounded-full text-xs font-bold tracking-widest">● ENTRADA VALIDADA</div>
-            <h2 id="welcomeTitle" class="mt-6 text-5xl md:text-7xl font-black tracking-tight leading-[0.85]">¡BIENVENIDO!</h2>
-            <p id="welcomeSubtitle" class="mt-6 text-xl md:text-2xl text-white/70"></p>
-            <p id="welcomeEvent" class="mt-3 text-violet-300 font-bold"></p>
-            <div class="mt-8 flex items-center gap-3 bg-white/[0.06] border border-white/10 rounded-2xl p-4">
-              <span id="voiceIcon" class="text-xl"></span>
-              <p id="welcomeMsg" class="text-white/80"></p>
-            </div>
-          </div>
-          <div class="lg:w-[380px] w-full">
-            <div class="bg-gradient-to-br from-sky-500/20 to-violet-500/20 border border-white/10 rounded-[32px] p-8 float">
-              <p class="text-white/40 text-xs tracking-widest uppercase">Invitación</p>
-              <p id="welcomeId" class="text-3xl font-black mt-2 font-mono"></p>
-              <p id="welcomeTime" class="text-white/50 text-sm mt-2"></p>
-              <div class="mt-6 h-[2px] bg-gradient-to-r from-sky-400 to-violet-400 rounded-full"></div>
-              <p class="text-white/60 text-sm mt-4">Gracias por acompañarnos en nuestra feria tecnológica</p>
-            </div>
-          </div>
-        </div>
+      <div id="welcomeCard" class="hidden flex-1 flex flex-col justify-center">
+        <p class="text-emerald-300 text-xs font-bold tracking-widest">● BIENVENIDO</p>
+        <h2 id="welcomeTitle" class="mt-4 text-5xl md:text-7xl font-black leading-[0.85]"></h2>
+        <p id="welcomeSubtitle" class="mt-6 text-xl text-white/70"></p>
+        <p id="welcomeEvent" class="mt-2 text-violet-300 font-bold"></p>
+        <p id="welcomeMsg" class="mt-8 text-white/60 max-w-xl"></p>
       </div>
-
     </div>
   </div>
-
 <script>
 let isShowing=false, localQueue=[], voiceEnabled=localStorage.getItem('feria_voice_enabled')==='true', audioCtx=null;
-const welcomeCard=document.getElementById('welcomeCard'), waitingState=document.getElementById('waitingState'), welcomeTitle=document.getElementById('welcomeTitle'), welcomeSubtitle=document.getElementById('welcomeSubtitle'), welcomeEvent=document.getElementById('welcomeEvent'), welcomeMsg=document.getElementById('welcomeMsg'), welcomeId=document.getElementById('welcomeId'), welcomeTime=document.getElementById('welcomeTime'), apiStatus=document.getElementById('apiStatus'), voiceToggle=document.getElementById('voiceToggle'), voiceOverlay=document.getElementById('voiceOverlay'), queueBadge=document.getElementById('queueBadge'), eventTag=document.getElementById('eventTag'), voiceIcon=document.getElementById('voiceIcon');
-function initAudio(){try{audioCtx=new (window.AudioContext||window.webkitAudioContext)(); if(audioCtx.state==='suspended') audioCtx.resume();}catch(e){} window.speechSynthesis.getVoices();}
-function updateVoiceUI(){if(voiceEnabled){voiceToggle.textContent='🔊 Voz activada'; voiceToggle.classList.add('bg-sky-400','text-slate-950'); voiceOverlay.style.display='none';}else{voiceToggle.textContent='🔇 Voz desactivada'; voiceToggle.classList.remove('bg-sky-400','text-slate-950');}}
-function enableVoice(){voiceEnabled=true; localStorage.setItem('feria_voice_enabled','true'); initAudio(); playTone(); const t=new SpeechSynthesisUtterance('Voz activada. Bienvenidos.'); t.lang='es-PE'; window.speechSynthesis.speak(t); updateVoiceUI();}
-function getVoice(){const v=window.speechSynthesis.getVoices(); return v.find(x=>x.lang==='es-PE')||v.find(x=>x.lang.startsWith('es-'))||v[0];}
-async function loadEventTag(){try{const r=await fetch(`${API_BASE}?action=getEvents&t=${Date.now()}`); const j=await r.json(); if(j.events?.[0]){eventTag.textContent='🎉 '+j.events[0].nombre; eventTag.className='inline-flex items-center gap-2 bg-violet-500/15 border border-violet-500/30 text-violet-200 px-4 py-2 rounded-full text-xs font-bold';} else{eventTag.textContent='⚠️ No hay evento activo';}}catch(e){}}
-async function fetchLatest(){try{const r=await fetch(`${API_BASE}?action=latest&t=${Date.now()}`,{cache:'no-store'}); const d=await r.json(); if(d && d.status==='INGRESADO'){ if(isShowing){localQueue.push(d); updateBadge(); apiStatus.textContent='En cola: '+localQueue.length;} else showWelcome(d); }}catch(e){apiStatus.textContent='Error Sheets';}}
-function updateBadge(){if(localQueue.length>0){queueBadge.style.display='inline-flex'; queueBadge.textContent='🎉 '+localQueue.length+' invitado(s) en espera';} else queueBadge.style.display='none';}
+const welcomeCard=document.getElementById('welcomeCard'), waitingState=document.getElementById('waitingState'), welcomeTitle=document.getElementById('welcomeTitle'), welcomeSubtitle=document.getElementById('welcomeSubtitle'), welcomeEvent=document.getElementById('welcomeEvent'), welcomeMsg=document.getElementById('welcomeMsg'), voiceToggle=document.getElementById('voiceToggle'), voiceOverlay=document.getElementById('voiceOverlay'), queueBadge=document.getElementById('queueBadge'), eventTag=document.getElementById('eventTag');
+function initAudio(){try{audioCtx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){} window.speechSynthesis.getVoices();}
+function updateVoiceUI(){if(voiceEnabled){voiceToggle.textContent='🔊 Sonido activado'; voiceOverlay.style.display='none';}else{voiceToggle.textContent='🔇 Sonido desactivado';}}
+function enableVoice(){voiceEnabled=true; localStorage.setItem('feria_voice_enabled','true'); initAudio(); updateVoiceUI(); const t=new SpeechSynthesisUtterance('Bienvenidos'); t.lang='es-PE'; window.speechSynthesis.speak(t);}
+function getVoice(){const v=window.speechSynthesis.getVoices(); return v.find(x=>x.lang==='es-PE')||v[0];}
+async function loadEventTag(){try{const r=await fetch(`${API_BASE}?action=getEvents&t=${Date.now()}`); const j=await r.json(); if(j.events?.[0]) eventTag.textContent=j.events[0].nombre; else eventTag.textContent='Bienvenidos';}catch(e){}}
+async function fetchLatest(){try{const r=await fetch(`${API_BASE}?action=latest&t=${Date.now()}`,{cache:'no-store'}); const d=await r.json(); if(d && d.status==='INGRESADO'){ if(isShowing){localQueue.push(d); queueBadge.style.display='inline-flex'; queueBadge.textContent=localQueue.length+' en espera';} else showWelcome(d); }}catch(e){}}
 function showWelcome(data){
   isShowing=true; waitingState.classList.add('hidden'); welcomeCard.classList.remove('hidden');
-  welcomeTitle.textContent='¡BIENVENIDO! '+data.nombres+' '+data.apellidos;
-  welcomeSubtitle.textContent=data.parentesco+' de '+data.estudiante+' ('+data.grado+')';
-  welcomeEvent.textContent=data.eventoNombre ? 'Evento: '+data.eventoNombre : '';
-  welcomeMsg.textContent='¡Qué alegría que estés aquí! Gracias por apoyar a '+data.estudiante;
-  welcomeId.textContent=data.id; welcomeTime.textContent='Hora: '+data.horaIngreso;
-  apiStatus.textContent='Mostrando: '+data.id;
-  for(let k=0;k<3;k++) setTimeout(()=>{for(let i=0;i<35;i++){const c=document.createElement('div'); c.className='absolute w-3 h-3 rounded-full'; c.style.left=Math.random()*90+'%'; c.style.top='10%'; c.style.background=['#38bdf8','#a78bfa','#f97316'][Math.floor(Math.random()*3)]; document.body.appendChild(c); c.animate([{transform:'translateY(0) rotate(0deg)',opacity:1},{transform:'translateY(600px) rotate(360deg)',opacity:0}],{duration:3000+Math.random()*1000,fill:'forwards'}); setTimeout(()=>c.remove(),4000);}},k*300);
-  playTone();
-  let voiceDone=!voiceEnabled, minDone=false;
-  function finish(){if(voiceDone&&minDone){welcomeCard.classList.add('hidden'); if(localQueue.length>0){const n=localQueue.shift(); updateBadge(); setTimeout(()=>showWelcome(n),1000);} else{waitingState.classList.remove('hidden'); isShowing=false; apiStatus.textContent='Esperando...';}}}
-  if(voiceEnabled){
-    voiceIcon.textContent='🔊'; 
-    const frase=`¡Bienvenido! ${data.nombres} ${data.apellidos}. ${data.parentesco} de ${data.estudiante}. Gracias por acompañarnos en ${data.eventoNombre||'nuestro evento'}. Pase adelante.`;
-    const u=new SpeechSynthesisUtterance(frase); u.lang='es-PE'; u.rate=0.9; const v=getVoice(); if(v) u.voice=v; u.onend=()=>{voiceDone=true; setTimeout(finish,1500);}; window.speechSynthesis.speak(u);
-  } else {voiceIcon.textContent='🔇'; voiceDone=true;}
-  setTimeout(()=>{minDone=true; finish();},10000);
-  setTimeout(()=>{window.speechSynthesis.cancel(); voiceDone=true; minDone=true; finish();},22000);
+  welcomeTitle.textContent='¡Hola! '+data.nombres+' '+data.apellidos;
+  welcomeSubtitle.textContent=data.parentesco+' de '+data.estudiante;
+  welcomeEvent.textContent=data.eventoNombre||'';
+  welcomeMsg.textContent=data.eventoMensaje||'¡Qué alegría que estés aquí! Gracias por acompañarnos.';
+  for(let k=0;k<2;k++) setTimeout(()=>{for(let i=0;i<25;i++){const c=document.createElement('div'); c.className='absolute w-3 h-3 rounded-full'; c.style.left=Math.random()*90+'%'; c.style.top='10%'; c.style.background=['#38bdf8','#a78bfa'][Math.floor(Math.random()*2)]; document.body.appendChild(c); c.animate([{transform:'translateY(0)',opacity:1},{transform:'translateY(600px)',opacity:0}],{duration:3000,fill:'forwards'}); setTimeout(()=>c.remove(),4000);}},k*300);
+  let voiceDone=!voiceEnabled, minDone=false; function finish(){if(voiceDone&&minDone){welcomeCard.classList.add('hidden'); if(localQueue.length>0){const n=localQueue.shift(); queueBadge.textContent=localQueue.length?localQueue.length+' en espera':''; if(localQueue.length===0) queueBadge.style.display='none'; setTimeout(()=>showWelcome(n),800);} else{waitingState.classList.remove('hidden'); isShowing=false;}}}
+  if(voiceEnabled){ const frase=`¡Bienvenido! ${data.nombres} ${data.apellidos}. ${data.parentesco} de ${data.estudiante}. ${data.eventoMensaje||'Gracias por acompañarnos'}.`; const u=new SpeechSynthesisUtterance(frase); u.lang='es-PE'; u.rate=0.9; const v=getVoice(); if(v) u.voice=v; u.onend=()=>{voiceDone=true; setTimeout(finish,1200);}; window.speechSynthesis.speak(u);} else voiceDone=true;
+  setTimeout(()=>{minDone=true; finish();},9000); setTimeout(()=>{window.speechSynthesis.cancel(); voiceDone=true; minDone=true; finish();},20000);
 }
-function playTone(){try{if(!audioCtx) initAudio(); const n=audioCtx.currentTime; const o=audioCtx.createOscillator(); const g=audioCtx.createGain(); o.frequency.setValueAtTime(480,n); o.frequency.linearRampToValueAtTime(880,n+0.35); g.gain.setValueAtTime(0,n); g.gain.linearRampToValueAtTime(0.32,n+0.03); g.gain.exponentialRampToValueAtTime(0.001,n+1.4); o.connect(g); g.connect(audioCtx.destination); o.start(n); o.stop(n+1.5);}catch(e){}}
-window.speechSynthesis.onvoiceschanged=()=>window.speechSynthesis.getVoices();
 document.getElementById('enableVoice').addEventListener('click', enableVoice);
 voiceToggle.addEventListener('click', ()=>{if(!voiceEnabled) enableVoice(); else{voiceEnabled=false; localStorage.removeItem('feria_voice_enabled'); updateVoiceUI();}});
 if(voiceEnabled){initAudio(); updateVoiceUI();} else voiceOverlay.style.display='grid';
