@@ -168,8 +168,13 @@ function registerAttendeeAPI(data) {
   ]);
 
   const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=' + encodeURIComponent(id);
-  sendInvitationEmail(data.email, data.nombres, data.apellidos, data.parentesco,
-    data.nombreEstudiante, data.gradoSeccion, dni, id, qrUrl);
+  try {
+    sendInvitationEmail(data.email, data.nombres, data.apellidos, data.parentesco,
+      data.nombreEstudiante, data.gradoSeccion, dni, id, qrUrl);
+  } catch (err) {
+    console.error('Error enviando invitacion ' + id + ': ' + err.message);
+    return { status: 'EMAIL_ERROR', id: id, email: data.email, message: 'La entrada se registro, pero no se pudo enviar el correo: ' + err.message };
+  }
   return { status: 'OK', id: id, email: data.email };
 }
 
@@ -186,7 +191,11 @@ function resendInvitation(email, eventoId) {
     if (String(values[r][7] || '').trim().toLowerCase() !== normalizedEmail || String(values[r][11] || '').trim() !== String(activeEvent.id).trim()) continue;
     const id = String(values[r][1]);
     const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=' + encodeURIComponent(id);
-    sendInvitationEmail(values[r][7], values[r][2], values[r][3], values[r][4], values[r][5], values[r][6], values[r][8], id, qrUrl);
+    try {
+      sendInvitationEmail(values[r][7], values[r][2], values[r][3], values[r][4], values[r][5], values[r][6], values[r][8], id, qrUrl);
+    } catch (err) {
+      return { status: 'EMAIL_ERROR', id: id, message: 'No se pudo reenviar el correo: ' + err.message };
+    }
     return { status: 'OK', id: id };
   }
   return { status: 'ERROR', message: 'No encontramos una entrada con ese correo' };
@@ -243,13 +252,23 @@ function sendInvitationEmail(email, nombres, apellidos, parentesco, estudiante, 
     '<p>DNI: ' + safe[6] + '</p>' +
     '<p>Para ingresar debe presentar este codigo QR y su DNI fisico.</p>' +
     '<img src="' + qrUrl + '"/></div>';
-  const blob = UrlFetchApp.fetch(qrUrl).getBlob().setName(id + '.png');
+  const qrResponse = UrlFetchApp.fetch(qrUrl, { muteHttpExceptions: true });
+  if (qrResponse.getResponseCode() !== 200) {
+    throw new Error('No se pudo generar el codigo QR (HTTP ' + qrResponse.getResponseCode() + ')');
+  }
+  const blob = qrResponse.getBlob().setName(id + '.png');
   MailApp.sendEmail({
     to: email,
     subject: 'Invitacion Feria - QR ' + id,
     htmlBody: htmlBody,
     attachments: [blob]
   });
+}
+
+function autorizarCorreo() {
+  MailApp.getRemainingDailyQuota();
+  UrlFetchApp.fetch('https://www.google.com', { muteHttpExceptions: true });
+  Logger.log('Autorizacion de correo y URL Fetch completada');
 }
 
 function normalizeHeader(value) {
