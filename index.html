@@ -73,6 +73,7 @@
             <label class="text-sm"><span class="text-white/60">Apellidos</span><input id="apellidos" required class="mt-1.5 w-full rounded-2xl bg-white/[0.06] border border-white/10 px-4 py-3.5 text-white" placeholder="López"></label>
           </div>
           <label class="text-sm"><span class="text-white/60">Nombre del estudiante</span><input id="nombreEstudiante" required class="mt-1.5 w-full rounded-2xl bg-white/[0.06] border border-white/10 px-4 py-3.5 text-white" placeholder="Juan López"></label>
+          <label class="text-sm"><span class="text-white/60">DNI del adulto</span><input id="dni" required inputmode="numeric" pattern="[0-9]{8}" maxlength="8" minlength="8" class="mt-1.5 w-full rounded-2xl bg-white/[0.06] border border-white/10 px-4 py-3.5 text-white" placeholder="12345678"></label>
           <div class="grid grid-cols-2 gap-3">
             <label class="text-sm"><span class="text-white/60">Grado</span><input id="gradoSeccion" required class="mt-1.5 w-full rounded-2xl bg-white/[0.06] border border-white/10 px-4 py-3.5 text-white" placeholder="3° A"></label>
             <label class="text-sm"><span class="text-white/60">Parentesco</span><input id="parentesco" required class="mt-1.5 w-full rounded-2xl bg-white/[0.06] border border-white/10 px-4 py-3.5 text-white" placeholder="Mamá"></label>
@@ -198,7 +199,7 @@ const form=document.getElementById('registrationForm');
 form.addEventListener('submit', async (e)=>{
   e.preventDefault();
   const status=document.getElementById('formStatus');
-  const data={action:'register', eventoId:activeEvent.id, nombres:document.getElementById('nombres').value.trim(), apellidos:document.getElementById('apellidos').value.trim(), nombreEstudiante:document.getElementById('nombreEstudiante').value.trim(), gradoSeccion:document.getElementById('gradoSeccion').value.trim(), parentesco:document.getElementById('parentesco').value.trim(), email:document.getElementById('emailFinal').value.trim()};
+  const data={action:'register', eventoId:activeEvent.id, nombres:document.getElementById('nombres').value.trim(), apellidos:document.getElementById('apellidos').value.trim(), nombreEstudiante:document.getElementById('nombreEstudiante').value.trim(), gradoSeccion:document.getElementById('gradoSeccion').value.trim(), parentesco:document.getElementById('parentesco').value.trim(), dni:document.getElementById('dni').value.trim(), email:document.getElementById('emailFinal').value.trim()};
   document.getElementById('btnEnviar').disabled=true;
   document.getElementById('btnEnviar').textContent='Reservando...';
   showStatus(status,'Reservando tu entrada...','');

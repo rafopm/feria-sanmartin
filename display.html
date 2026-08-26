@@ -13,6 +13,7 @@
   <div class="fixed inset-0 bg-[radial-gradient(circle_at_20%_30%,rgba(56,189,248,0.12),transparent_35%),radial-gradient(circle_at_80%_70%,rgba(168,85,247,0.1),transparent_30%)]"></div>
   <div class="relative w-full h-screen p-6 md:p-10 flex items-center justify-center">
     <div class="w-full max-w-6xl bg-white/[0.04] border border-white/10 rounded-[40px] p-8 md:p-12 backdrop-blur-2xl shadow-2xl relative overflow-hidden min-h-[560px] flex flex-col">
+      <div class="w-full text-center text-[clamp(0.5rem,2.8vw,1.25rem)] font-black tracking-wide whitespace-nowrap">IEP San Martín de Porres.</div>
       <div class="flex justify-between items-start">
         <div id="eventTag" class="bg-white/10 px-4 py-2 rounded-full text-xs font-bold text-white/60">Conectando...</div>
         <button id="voiceToggle" class="bg-white/10 px-4 py-2 rounded-full text-xs font-bold">🔇 Sonido</button>
@@ -26,7 +27,7 @@
         </div>
       </div>
       <div id="waitingState" class="flex-1 flex flex-col items-center justify-center text-center py-20">
-        <h3 class="text-5xl md:text-7xl font-black leading-[0.95] max-w-5xl">Bienvenidos a la Feria de Ciencia y Tecnología 2026<br><span class="text-transparent bg-clip-text bg-gradient-to-r from-sky-300 to-violet-300">IEP San Martín de Porres.</span></h3>
+        <h3 id="waitingMessage" class="text-5xl md:text-7xl font-black leading-[0.95] max-w-5xl">Bienvenidos a la Feria de Ciencia y Tecnología 2026</h3>
         <p class="text-white/40 mt-6 text-lg">Tu bienvenida aparecerá aquí automáticamente</p>
         <div id="queueBadge" class="hidden mt-6 bg-sky-500/10 border border-sky-500/20 text-sky-200 px-5 py-2.5 rounded-full text-sm font-bold"></div>
       </div>
@@ -35,28 +36,28 @@
         <h2 id="welcomeTitle" class="mt-4 text-5xl md:text-7xl font-black leading-[0.85]"></h2>
         <p id="welcomeSubtitle" class="mt-6 text-xl text-white/70"></p>
         <p id="welcomeEvent" class="mt-2 text-violet-300 font-bold"></p>
-        <p id="welcomeMsg" class="mt-8 text-white/60 max-w-xl"></p>
+        <p id="welcomeMsg" class="mt-8 text-3xl md:text-6xl leading-tight font-black text-white max-w-5xl"></p>
       </div>
     </div>
   </div>
 <script>
 let isShowing=false, localQueue=[], voiceEnabled=localStorage.getItem('feria_voice_enabled')==='true', audioCtx=null;
-const welcomeCard=document.getElementById('welcomeCard'), waitingState=document.getElementById('waitingState'), welcomeTitle=document.getElementById('welcomeTitle'), welcomeSubtitle=document.getElementById('welcomeSubtitle'), welcomeEvent=document.getElementById('welcomeEvent'), welcomeMsg=document.getElementById('welcomeMsg'), voiceToggle=document.getElementById('voiceToggle'), voiceOverlay=document.getElementById('voiceOverlay'), queueBadge=document.getElementById('queueBadge'), eventTag=document.getElementById('eventTag');
+const welcomeCard=document.getElementById('welcomeCard'), waitingState=document.getElementById('waitingState'), waitingMessage=document.getElementById('waitingMessage'), welcomeTitle=document.getElementById('welcomeTitle'), welcomeSubtitle=document.getElementById('welcomeSubtitle'), welcomeEvent=document.getElementById('welcomeEvent'), welcomeMsg=document.getElementById('welcomeMsg'), voiceToggle=document.getElementById('voiceToggle'), voiceOverlay=document.getElementById('voiceOverlay'), queueBadge=document.getElementById('queueBadge'), eventTag=document.getElementById('eventTag');
 function initAudio(){try{audioCtx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){} window.speechSynthesis.getVoices();}
 function updateVoiceUI(){if(voiceEnabled){voiceToggle.textContent='🔊 Sonido activado'; voiceOverlay.style.display='none';}else{voiceToggle.textContent='🔇 Sonido desactivado';}}
 function enableVoice(){voiceEnabled=true; localStorage.setItem('feria_voice_enabled','true'); initAudio(); updateVoiceUI(); const t=new SpeechSynthesisUtterance('Bienvenidos'); t.lang='es-PE'; window.speechSynthesis.speak(t);}
 function getVoice(){const v=window.speechSynthesis.getVoices(); return v.find(x=>x.lang==='es-PE')||v[0];}
-async function loadEventTag(){try{const r=await fetch(`${API_BASE}?action=getEvents&t=${Date.now()}`); const j=await r.json(); if(j.events?.[0]) eventTag.textContent=j.events[0].nombre; else eventTag.textContent='Bienvenidos';}catch(e){}}
+async function loadEventTag(){try{const r=await fetch(`${API_BASE}?action=getEvents&t=${Date.now()}`); const j=await r.json(); if(j.events?.[0]){ eventTag.textContent=j.events[0].nombre; waitingMessage.textContent=j.events[0].mensaje||'Bienvenidos a la Feria de Ciencia y Tecnología 2026'; } else eventTag.textContent='Bienvenidos';}catch(e){}}
 async function fetchLatest(){try{const r=await fetch(`${API_BASE}?action=latest&t=${Date.now()}`,{cache:'no-store'}); const d=await r.json(); if(d && d.status==='INGRESADO'){ if(isShowing){localQueue.push(d); queueBadge.style.display='inline-flex'; queueBadge.textContent=localQueue.length+' en espera';} else showWelcome(d); }}catch(e){}}
 function showWelcome(data){
   isShowing=true; waitingState.classList.add('hidden'); welcomeCard.classList.remove('hidden');
   welcomeTitle.textContent='¡Hola! '+data.nombres+' '+data.apellidos;
   welcomeSubtitle.textContent=data.parentesco+' de '+data.estudiante;
   welcomeEvent.textContent=data.eventoNombre||'';
-  welcomeMsg.textContent=data.eventoMensaje||'¡Qué alegría que estés aquí! Gracias por acompañarnos.';
+  welcomeMsg.textContent=data.eventoMensaje||data.mensaje||'¡Qué alegría que estés aquí! Gracias por acompañarnos.';
   for(let k=0;k<2;k++) setTimeout(()=>{for(let i=0;i<25;i++){const c=document.createElement('div'); c.className='absolute w-3 h-3 rounded-full'; c.style.left=Math.random()*90+'%'; c.style.top='10%'; c.style.background=['#38bdf8','#a78bfa'][Math.floor(Math.random()*2)]; document.body.appendChild(c); c.animate([{transform:'translateY(0)',opacity:1},{transform:'translateY(600px)',opacity:0}],{duration:3000,fill:'forwards'}); setTimeout(()=>c.remove(),4000);}},k*300);
   let voiceDone=!voiceEnabled, minDone=false; function finish(){if(voiceDone&&minDone){welcomeCard.classList.add('hidden'); if(localQueue.length>0){const n=localQueue.shift(); queueBadge.textContent=localQueue.length?localQueue.length+' en espera':''; if(localQueue.length===0) queueBadge.style.display='none'; setTimeout(()=>showWelcome(n),800);} else{waitingState.classList.remove('hidden'); isShowing=false;}}}
-  if(voiceEnabled){ const frase=`¡Bienvenido! ${data.nombres} ${data.apellidos}. ${data.parentesco} de ${data.estudiante}. ${data.eventoMensaje||'Gracias por acompañarnos'}.`; const u=new SpeechSynthesisUtterance(frase); u.lang='es-PE'; u.rate=0.9; const v=getVoice(); if(v) u.voice=v; u.onend=()=>{voiceDone=true; setTimeout(finish,1200);}; window.speechSynthesis.speak(u);} else voiceDone=true;
+  if(voiceEnabled){ const frase=`¡Bienvenido! ${data.nombres} ${data.apellidos}. ${data.parentesco} de ${data.estudiante}. ${data.eventoMensaje||data.mensaje||'Gracias por acompañarnos'}.`; const u=new SpeechSynthesisUtterance(frase); u.lang='es-PE'; u.rate=0.9; const v=getVoice(); if(v) u.voice=v; u.onend=()=>{voiceDone=true; setTimeout(finish,1200);}; window.speechSynthesis.speak(u);} else voiceDone=true;
   setTimeout(()=>{minDone=true; finish();},9000); setTimeout(()=>{window.speechSynthesis.cancel(); voiceDone=true; minDone=true; finish();},20000);
 }
 document.getElementById('enableVoice').addEventListener('click', enableVoice);
