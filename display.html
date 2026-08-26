@@ -27,7 +27,7 @@
         </div>
       </div>
       <div id="waitingState" class="flex-1 flex flex-col items-center justify-center text-center py-20">
-        <h3 id="waitingMessage" class="text-5xl md:text-7xl font-black leading-[0.95] max-w-5xl">Bienvenidos a la Feria de Ciencia y Tecnología 2026</h3>
+        <h3 id="waitingMessage" class="text-5xl md:text-7xl font-black leading-[0.95] max-w-5xl">Cargando evento...</h3>
         <p class="text-white/40 mt-6 text-lg">Tu bienvenida aparecerá aquí automáticamente</p>
         <div id="queueBadge" class="hidden mt-6 bg-sky-500/10 border border-sky-500/20 text-sky-200 px-5 py-2.5 rounded-full text-sm font-bold"></div>
       </div>
@@ -48,7 +48,7 @@ function initAudio(){try{audioCtx=new (window.AudioContext||window.webkitAudioCo
 function updateVoiceUI(){if(voiceEnabled){voiceToggle.textContent='🔊 Sonido activado'; voiceOverlay.style.display='none';}else{voiceToggle.textContent='🔇 Sonido desactivado';}}
 function enableVoice(){voiceEnabled=true; localStorage.setItem('feria_voice_enabled','true'); initAudio(); updateVoiceUI(); const t=new SpeechSynthesisUtterance('Bienvenidos'); t.lang='es-PE'; window.speechSynthesis.speak(t);}
 function getVoice(){const v=window.speechSynthesis.getVoices(); return v.find(x=>x.lang==='es-PE')||v[0];}
-async function loadEventTag(){try{const r=await fetch(`${API_BASE}?action=getEvents&t=${Date.now()}`); const j=await r.json(); const event=(j.events||[]).find(item=>item.activo===true); if(event){ activeEventId=String(event.id); eventTag.textContent=event.nombre; waitingMessage.textContent=event.mensaje||'Bienvenidos a la Feria de Ciencia y Tecnología 2026'; } else eventTag.textContent='Sin evento activo';}catch(e){}}
+async function loadEventTag(){try{const r=await fetch(`${API_BASE}?action=getEvents&t=${Date.now()}`); const j=await r.json(); const event=(j.events||[]).find(item=>item.activo===true); if(event){ activeEventId=String(event.id); eventTag.textContent=event.nombre; waitingMessage.textContent=event.mensaje||'Bienvenidos'; } else { eventTag.textContent='Sin evento activo'; waitingMessage.textContent='No hay evento activo'; }}catch(e){ eventTag.textContent='Sin conexión'; waitingMessage.textContent='No se pudo cargar el evento'; }}
 async function fetchLatest(){try{const r=await fetch(`${API_BASE}?action=latest&t=${Date.now()}`,{cache:'no-store'}); const d=await r.json(); if(d && d.status==='INGRESADO' && String(d.eventoId||'')===activeEventId){ if(isShowing){localQueue.push(d); queueBadge.style.display='inline-flex'; queueBadge.textContent=localQueue.length+' en espera';} else showWelcome(d); }}catch(e){}}
 function showWelcome(data){
   isShowing=true; waitingState.classList.add('hidden'); welcomeCard.classList.remove('hidden');
