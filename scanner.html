@@ -39,6 +39,17 @@
       Toca "Activar cámara" para comenzar. Permite el acceso a la cámara cuando el navegador lo pida.
     </div>
 
+    <div id="validationDetails" class="hidden mt-4 grid grid-cols-2 gap-3 rounded-2xl border border-white/10 bg-white/[0.06] p-4">
+      <div>
+        <p class="text-white/40 text-xs uppercase tracking-wide">DNI</p>
+        <p id="validatedDni" class="mt-1 text-xl font-black text-sky-300"></p>
+      </div>
+      <div>
+        <p class="text-white/40 text-xs uppercase tracking-wide">Alumno</p>
+        <p id="validatedStudent" class="mt-1 text-base font-bold text-white"></p>
+      </div>
+    </div>
+
     <div class="mt-4 grid grid-cols-2 gap-3">
       <button id="nextBtn" class="hidden bg-white text-slate-900 font-extrabold py-4 rounded-2xl">Escanear otro</button>
       <button id="switchBtn" class="hidden bg-white/10 border border-white/10 text-white/70 py-4 rounded-2xl text-sm">Cambiar cámara</button>
@@ -61,6 +72,9 @@ const startBtn=document.getElementById('startBtn');
 const nextBtn=document.getElementById('nextBtn');
 const switchBtn=document.getElementById('switchBtn');
 const overlay=document.getElementById('cameraOverlay');
+const validationDetails=document.getElementById('validationDetails');
+const validatedDni=document.getElementById('validatedDni');
+const validatedStudent=document.getElementById('validatedStudent');
 
 function update(t,type){
   let cls="mt-4 p-4 rounded-2xl text-sm font-bold text-center border ";
@@ -70,6 +84,12 @@ function update(t,type){
   else cls+="bg-white/[0.06] border-white/10 text-white/70";
   msg.className=cls;
   msg.textContent=t;
+}
+
+function showValidationDetails(data){
+  validatedDni.textContent=data.dni||data.DNI||data.documento||data.documentoIdentidad||'No registrado';
+  validatedStudent.textContent=data.estudiante||data.nombreEstudiante||'No registrado';
+  validationDetails.classList.remove('hidden');
 }
 
 async function loadEvent(){
@@ -158,6 +178,7 @@ async function onScanSuccess(decoded){
   lastTime=now;
   
   scanning=false;
+  validationDetails.classList.add('hidden');
   try{ await html5QrCode.pause(true); }catch(e){}
   
   update('Verificando entrada '+id+'...','');
@@ -166,8 +187,10 @@ async function onScanSuccess(decoded){
     const r=await fetch(`${API_BASE}?action=check&id=${encodeURIComponent(id)}&t=${now}`,{cache:'no-store'});
     const res=await r.json();
     if(res.status==='OK'){
+      showValidationDetails(res.data);
       update('✅ BIENVENIDO: '+res.data.nombres+' '+res.data.apellidos+' - '+res.data.eventoNombre,'success');
     }else if(res.status==='DUPLICADO'){
+      showValidationDetails(res.data);
       update('⚠️ Esta entrada ya fue usada a las '+(res.data.horaIngreso||''),'warning');
     }else if(res.status==='EVENTO_INACTIVO'){
       update('🚫 Este evento ya no está disponible','error');
