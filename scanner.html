@@ -66,6 +66,7 @@ let currentFacing="environment";
 let scanning=false;
 let lastId=null;
 let lastTime=0;
+let activeEventId='';
 
 const msg=document.getElementById('message');
 const startBtn=document.getElementById('startBtn');
@@ -101,8 +102,10 @@ async function loadEvent(){
     }
     const r=await fetch(`${API_BASE}?action=getEvents&t=${Date.now()}`,{cache:'no-store'});
     const j=await r.json();
-    if(j.events && j.events.length>0){
-      document.getElementById('eventTag').textContent=j.events[0].nombre;
+    const activeEvent=(j.events||[]).find(event=>event.activo===true);
+    if(activeEvent){
+      activeEventId=String(activeEvent.id);
+      document.getElementById('eventTag').textContent=activeEvent.nombre;
     }else{
       document.getElementById('eventTag').textContent='Sin evento activo';
       update('No hay evento activo en este momento. Activa uno en la hoja Eventos','warning');

@@ -1,7 +1,7 @@
 const SHEET_NAME = 'Respuestas';
 const EVENTS_SHEET_NAME = 'Eventos';
 const PROP_KEY = 'LATEST_INGRESO_DISPLAY';
-const RESPONSE_HEADERS = ['Fecha', 'ID', 'Nombres', 'Apellidos', 'Parentesco', 'Estudiante', 'Grado', 'Email', 'DNI', 'Estado', 'Hora'];
+const RESPONSE_HEADERS = ['Fecha', 'ID', 'Nombres', 'Apellidos', 'Parentesco', 'Estudiante', 'Grado', 'Email', 'DNI', 'Estado', 'Hora', 'Evento ID'];
 
 function doGet(e) {
   const action = e && e.parameter ? e.parameter.action : '';
@@ -51,11 +51,11 @@ function getEvents() {
   const headers = values[0].map(normalizeHeader);
   return values.slice(1).map(function (row) {
     return {
-      id: cell(row, headers, ['id', 'eventoid']),
+      id: cell(row, headers, ['idevento', 'id', 'eventoid']),
       nombre: cell(row, headers, ['nombre', 'evento']),
       descripcion: cell(row, headers, ['descripcion', 'descripción']),
       fecha: formatCell(cell(row, headers, ['fecha'])),
-      mensaje: cell(row, headers, ['mensaje', 'mensajebienvenida']),
+      mensaje: cell(row, headers, ['mensajebienvenida', 'mensaje']),
       activo: isActive(cell(row, headers, ['activo', 'estado']))
     };
   }).filter(function (event) {
@@ -67,11 +67,15 @@ function checkEmail(email, eventoId) {
   const normalizedEmail = String(email || '').trim().toLowerCase();
   if (!normalizedEmail) return { exists: false };
 
+  const activeEvent = getActiveEvent();
+  if (!activeEvent || String(eventoId || '').trim() !== String(activeEvent.id).trim()) return { exists: false };
+
   const sheet = getResponsesSheet();
   const values = sheet.getDataRange().getValues();
   for (let r = 1; r < values.length; r++) {
     const rowEmail = String(values[r][7] || '').trim().toLowerCase();
-    if (rowEmail === normalizedEmail) {
+    const rowEventId = String(values[r][11] || '').trim();
+    if (rowEmail === normalizedEmail && rowEventId === String(activeEvent.id).trim()) {
       return {
         exists: true,
         id: values[r][1],
@@ -92,11 +96,14 @@ function checkInvitationById(invitationId) {
     const sheet = getResponsesSheet();
     const values = sheet.getDataRange().getValues();
     const searchId = String(invitationId || '').trim();
+    const activeEvent = getActiveEvent();
+    if (!activeEvent) return { status: 'NO_HAY_EVENTO' };
 
     for (let r = 1; r < values.length; r++) {
       if (String(values[r][1]).trim() !== searchId) continue;
+      if (String(values[r][11]).trim() !== String(activeEvent.id).trim()) return { status: 'EVENTO_INACTIVO' };
 
-      const data = attendeeData(values[r], searchId);
+      const data = attendeeData(values[r], searchId, activeEvent);
       if (String(values[r][9]).trim().toUpperCase() === 'INGRESADO') {
         return { status: 'DUPLICADO', data: data };
       }
@@ -114,8 +121,9 @@ function checkInvitationById(invitationId) {
         parentesco: data.parentesco,
         estudiante: data.estudiante,
         dni: data.dni,
-        eventoNombre: data.eventoNombre || '',
-        eventoMensaje: data.eventoMensaje || '',
+        eventoId: activeEvent.id,
+        eventoNombre: activeEvent.nombre,
+        eventoMensaje: activeEvent.mensaje,
         horaIngreso: hora,
         timestamp: data.timestamp
       }));
@@ -144,6 +152,11 @@ function registerAttendeeAPI(data) {
   const dni = String(data.dni).trim();
   if (!/^\d{8}$/.test(dni)) throw new Error('El DNI debe tener 8 digitos');
 
+  const activeEvent = getActiveEvent();
+  if (!activeEvent || String(data.eventoId || '').trim() !== String(activeEvent.id).trim()) {
+    return { status: 'EVENTO_INACTIVO', message: 'El evento seleccionado ya no esta activo' };
+  }
+
   const sheet = getResponsesSheet();
   const existing = checkEmail(data.email, data.eventoId);
   if (existing.exists) return { status: 'CORREO_DUPLICADO', id: existing.id };
@@ -151,7 +164,7 @@ function registerAttendeeAPI(data) {
   const id = buildInvitationId(sheet);
   sheet.appendRow([
     new Date(), id, data.nombres, data.apellidos, data.parentesco,
-    data.nombreEstudiante, data.gradoSeccion, data.email, dni, 'PENDIENTE', ''
+    data.nombreEstudiante, data.gradoSeccion, data.email, dni, 'PENDIENTE', '', activeEvent.id
   ]);
 
   const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=' + encodeURIComponent(id);
@@ -164,9 +177,13 @@ function resendInvitation(email, eventoId) {
   const normalizedEmail = String(email || '').trim().toLowerCase();
   const sheet = getResponsesSheet();
   const values = sheet.getDataRange().getValues();
+  const activeEvent = getActiveEvent();
+  if (!activeEvent || String(eventoId || '').trim() !== String(activeEvent.id).trim()) {
+    return { status: 'ERROR', message: 'El evento ya no esta activo' };
+  }
 
   for (let r = 1; r < values.length; r++) {
-    if (String(values[r][7] || '').trim().toLowerCase() !== normalizedEmail) continue;
+    if (String(values[r][7] || '').trim().toLowerCase() !== normalizedEmail || String(values[r][11] || '').trim() !== String(activeEvent.id).trim()) continue;
     const id = String(values[r][1]);
     const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=' + encodeURIComponent(id);
     sendInvitationEmail(values[r][7], values[r][2], values[r][3], values[r][4], values[r][5], values[r][6], values[r][8], id, qrUrl);
@@ -184,7 +201,7 @@ function getResponsesSheet() {
   return sheet;
 }
 
-function attendeeData(row, id) {
+function attendeeData(row, id, event) {
   return {
     id: id,
     nombres: row[2],
@@ -192,8 +209,16 @@ function attendeeData(row, id) {
     parentesco: row[4],
     estudiante: row[5],
     grado: row[6],
-    dni: row[8]
+    dni: row[8],
+    eventoId: event.id,
+    eventoNombre: event.nombre,
+    eventoMensaje: event.mensaje
   };
+}
+
+function getActiveEvent() {
+  const events = getEvents().filter(function (event) { return event.activo; });
+  return events.length ? events[0] : null;
 }
 
 function buildInvitationId(sheet) {

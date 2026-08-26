@@ -42,13 +42,14 @@
   </div>
 <script>
 let isShowing=false, localQueue=[], voiceEnabled=localStorage.getItem('feria_voice_enabled')==='true', audioCtx=null;
+let activeEventId='';
 const welcomeCard=document.getElementById('welcomeCard'), waitingState=document.getElementById('waitingState'), waitingMessage=document.getElementById('waitingMessage'), welcomeTitle=document.getElementById('welcomeTitle'), welcomeSubtitle=document.getElementById('welcomeSubtitle'), welcomeEvent=document.getElementById('welcomeEvent'), welcomeMsg=document.getElementById('welcomeMsg'), voiceToggle=document.getElementById('voiceToggle'), voiceOverlay=document.getElementById('voiceOverlay'), queueBadge=document.getElementById('queueBadge'), eventTag=document.getElementById('eventTag');
 function initAudio(){try{audioCtx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){} window.speechSynthesis.getVoices();}
 function updateVoiceUI(){if(voiceEnabled){voiceToggle.textContent='🔊 Sonido activado'; voiceOverlay.style.display='none';}else{voiceToggle.textContent='🔇 Sonido desactivado';}}
 function enableVoice(){voiceEnabled=true; localStorage.setItem('feria_voice_enabled','true'); initAudio(); updateVoiceUI(); const t=new SpeechSynthesisUtterance('Bienvenidos'); t.lang='es-PE'; window.speechSynthesis.speak(t);}
 function getVoice(){const v=window.speechSynthesis.getVoices(); return v.find(x=>x.lang==='es-PE')||v[0];}
-async function loadEventTag(){try{const r=await fetch(`${API_BASE}?action=getEvents&t=${Date.now()}`); const j=await r.json(); if(j.events?.[0]){ eventTag.textContent=j.events[0].nombre; waitingMessage.textContent=j.events[0].mensaje||'Bienvenidos a la Feria de Ciencia y Tecnología 2026'; } else eventTag.textContent='Bienvenidos';}catch(e){}}
-async function fetchLatest(){try{const r=await fetch(`${API_BASE}?action=latest&t=${Date.now()}`,{cache:'no-store'}); const d=await r.json(); if(d && d.status==='INGRESADO'){ if(isShowing){localQueue.push(d); queueBadge.style.display='inline-flex'; queueBadge.textContent=localQueue.length+' en espera';} else showWelcome(d); }}catch(e){}}
+async function loadEventTag(){try{const r=await fetch(`${API_BASE}?action=getEvents&t=${Date.now()}`); const j=await r.json(); const event=(j.events||[]).find(item=>item.activo===true); if(event){ activeEventId=String(event.id); eventTag.textContent=event.nombre; waitingMessage.textContent=event.mensaje||'Bienvenidos a la Feria de Ciencia y Tecnología 2026'; } else eventTag.textContent='Sin evento activo';}catch(e){}}
+async function fetchLatest(){try{const r=await fetch(`${API_BASE}?action=latest&t=${Date.now()}`,{cache:'no-store'}); const d=await r.json(); if(d && d.status==='INGRESADO' && String(d.eventoId||'')===activeEventId){ if(isShowing){localQueue.push(d); queueBadge.style.display='inline-flex'; queueBadge.textContent=localQueue.length+' en espera';} else showWelcome(d); }}catch(e){}}
 function showWelcome(data){
   isShowing=true; waitingState.classList.add('hidden'); welcomeCard.classList.remove('hidden');
   welcomeTitle.textContent='¡Hola! '+data.nombres+' '+data.apellidos;
@@ -64,7 +65,7 @@ document.getElementById('enableVoice').addEventListener('click', enableVoice);
 voiceToggle.addEventListener('click', ()=>{if(!voiceEnabled) enableVoice(); else{voiceEnabled=false; localStorage.removeItem('feria_voice_enabled'); updateVoiceUI();}});
 if(voiceEnabled){initAudio(); updateVoiceUI();} else voiceOverlay.style.display='grid';
 setInterval(fetchLatest,1200);
-window.addEventListener('load', ()=>{fetchLatest(); initAudio(); loadEventTag();});
+window.addEventListener('load', ()=>{initAudio(); loadEventTag(); setTimeout(fetchLatest,400);});
 </script>
 </body>
 </html>
