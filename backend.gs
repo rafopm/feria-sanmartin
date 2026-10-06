@@ -219,8 +219,9 @@ function votingStateKey(eventId, gradeKey) {
 }
 
 function checkAdminPin(pin) {
-  const expectedPin = PropertiesService.getScriptProperties().getProperty('VOTING_ADMIN_PIN');
-  return { authorized: Boolean(expectedPin) && String(pin || '') === expectedPin };
+  const expectedPin = String(PropertiesService.getScriptProperties().getProperty('VOTING_ADMIN_PIN') || '').trim();
+  const submittedPin = String(pin || '').trim();
+  return { authorized: Boolean(expectedPin) && submittedPin === expectedPin };
 }
 
 function findEligibleAttendee(email, dni) {

@@ -78,11 +78,15 @@ async function toggleGrade(grade,button){
   finally{button.disabled=false;}
 }
 async function enterPanel(pin){
-  const result=await post({action:'adminCheck',pin:pin});
-  if(!result.authorized){
-    showMessage(document.getElementById('pinMessage'),'PIN no válido. Verifica el PIN configurado en las propiedades del script.',true);return false;
+  const result=await post({action:'adminCheck',pin:String(pin||'').trim()});
+  if(typeof result.authorized!=='boolean'){
+    showMessage(document.getElementById('pinMessage'),'El servidor no respondió la validación del PIN. Actualiza el backend de Apps Script y vuelve a intentar.',true);return false;
   }
-  adminPin=pin;sessionStorage.setItem(PIN_KEY,pin);
+  if(!result.authorized){
+    sessionStorage.removeItem(PIN_KEY);
+    showMessage(document.getElementById('pinMessage'),'El PIN no coincide con VOTING_ADMIN_PIN en las propiedades del script enlazado.',true);return false;
+  }
+  adminPin=String(pin||'').trim();sessionStorage.setItem(PIN_KEY,adminPin);
   document.getElementById('pinPanel').classList.add('hidden');document.getElementById('controls').classList.remove('hidden');
   await loadStatus();return true;
 }
