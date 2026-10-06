@@ -24,7 +24,7 @@ function doGet(e) {
 
   const page = e && e.parameter ? e.parameter.page || 'Index' : 'Index';
   const pageName = page.toLowerCase();
-  const file = pageName === 'display' ? 'Display' : pageName === 'scanner' ? 'Scanner' : pageName === 'admin' ? 'Admin' : pageName === 'vote' ? 'Vote' : 'Index';
+  const file = pageName === 'display' ? 'display' : pageName === 'scanner' ? 'scanner' : pageName === 'admin' ? 'admin' : pageName === 'vote' ? 'vote' : 'index';
   try {
     return HtmlService.createHtmlOutputFromFile(file)
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
