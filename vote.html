@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Votación Feria San Martín</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="config.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&display=swap" rel="stylesheet">
+<style>body{font-family:'Plus Jakarta Sans',sans-serif}</style>
+</head>
+<body class="min-h-screen bg-[#071114] text-white p-4 sm:p-6">
+  <main class="mx-auto max-w-3xl">
+    <header class="border-b border-white/10 pb-5">
+      <p class="text-xs font-bold uppercase tracking-widest text-teal-300">Feria escolar · San Martín</p>
+      <h1 class="mt-2 text-3xl font-extrabold">Votación de proyectos</h1>
+      <p id="identityLabel" class="mt-2 text-sm text-white/55">Verificando estado de la feria...</p>
+    </header>
+
+    <section id="loginPanel" class="mt-6 max-w-lg">
+      <h2 class="text-xl font-bold">Identifica tu entrada</h2>
+      <p class="mt-2 text-sm leading-6 text-white/60">Solo pueden votar las personas cuya entrada fue validada al ingresar. Usa el correo y el DNI del adulto registrados.</p>
+      <form id="loginForm" class="mt-5 grid gap-4">
+        <label class="grid gap-2 text-sm text-white/70">Correo electrónico
+          <input id="emailInput" type="email" autocomplete="email" required class="rounded-xl border border-white/15 bg-white/[0.06] px-4 py-3 text-white outline-none focus:border-teal-300" placeholder="tu@correo.com" />
+        </label>
+        <label class="grid gap-2 text-sm text-white/70">DNI del adulto
+          <input id="dniInput" type="password" inputmode="numeric" autocomplete="off" pattern="[0-9]{8}" maxlength="8" required class="rounded-xl border border-white/15 bg-white/[0.06] px-4 py-3 text-white outline-none focus:border-teal-300" placeholder="8 dígitos" />
+        </label>
+        <button id="loginButton" class="inline-flex items-center justify-center gap-2 rounded-xl bg-teal-300 px-5 py-3 font-extrabold text-[#071114]">Continuar</button>
+        <p id="loginMessage" class="hidden rounded-xl border px-4 py-3 text-sm"></p>
+      </form>
+    </section>
+
+    <section id="votePanel" class="hidden mt-6">
+      <div id="attendanceMessage" class="rounded-xl border border-teal-300/20 bg-teal-300/10 px-4 py-3 text-sm text-teal-100"></div>
+      <div id="completionMessage" class="hidden mt-4 rounded-xl border border-emerald-300/25 bg-emerald-300/10 px-4 py-4 text-sm font-bold text-emerald-100"></div>
+      <div id="gradeList" class="mt-6 grid gap-8"></div>
+      <button id="forgetButton" class="mt-8 text-sm text-white/45 underline">Cerrar sesión en este dispositivo</button>
+    </section>
+  </main>
+<script>
+const SESSION_KEY='feria_voter_session';
+const loginPanel=document.getElementById('loginPanel');
+const votePanel=document.getElementById('votePanel');
+const loginMessage=document.getElementById('loginMessage');
+let voterSession=null;
+let votingStatus=[];
+let voterVotes={};
+let lastVotedGrade=null;
+let refreshTimer=null;
+
+async function post(payload){
+  const response=await fetch(API_BASE,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)});
+  return response.json();
+}
+function message(element,text,type){
+  element.classList.remove('hidden','border-red-300/20','bg-red-300/10','text-red-100','border-teal-300/20','bg-teal-300/10','text-teal-100');
+  element.classList.add(type==='error'?'border-red-300/20':'border-teal-300/20',type==='error'?'bg-red-300/10':'bg-teal-300/10',type==='error'?'text-red-100':'text-teal-100');
+  element.textContent=text;
+}
+async function authenticate(email,dni,showError){
+  const result=await post({action:'checkVoter',email:email,dni:dni});
+  if(result.status!=='OK'){
+    if(showError) message(loginMessage,'No encontramos un ingreso validado con ese correo y DNI. Presenta tu entrada al equipo de acceso.','error');
+    return false;
+  }
+  voterSession={email:email,dni:dni};
+  voterVotes=result.votes||{};
+  localStorage.setItem(SESSION_KEY,JSON.stringify(voterSession));
+  loginPanel.classList.add('hidden');
+  votePanel.classList.remove('hidden');
+  document.getElementById('identityLabel').textContent='Entrada validada para '+email;
+  await refreshVoting();
+  if(!refreshTimer) refreshTimer=setInterval(refreshVoting,3500);
+  return true;
+}
+async function refreshVoting(){
+  if(!voterSession) return;
+  try{
+    const [statusResponse,voterResponse]=await Promise.all([
+      fetch(API_BASE+'?action=getVotingStatus&t='+Date.now(),{cache:'no-store'}),
+      post({action:'checkVoter',email:voterSession.email,dni:voterSession.dni})
+    ]);
+    const status=await statusResponse.json();
+    const voter=await voterResponse.json();
+    if(voter.status!=='OK'){
+      localStorage.removeItem(SESSION_KEY);
+      voterSession=null;
+      votePanel.classList.add('hidden');
+      loginPanel.classList.remove('hidden');
+      document.getElementById('identityLabel').textContent='La entrada no está validada.';
+      return;
+    }
+    votingStatus=status.grades||[];
+    voterVotes=voter.votes||{};
+    renderGrades();
+  }catch(error){
+    document.getElementById('attendanceMessage').textContent='Sin conexión. Se volverá a comprobar automáticamente.';
+  }
+}
+function renderGrades(){
+  const list=document.getElementById('gradeList');
+  list.replaceChildren();
+  const openGrade=votingStatus.find(grade=>grade.open&&!voterVotes[grade.key]);
+  const waitingGrade=votingStatus.find(grade=>!voterVotes[grade.key]);
+  if(openGrade){
+    document.getElementById('attendanceMessage').textContent='Votación abierta: '+openGrade.label+'. Elige un proyecto y confirma tu voto.';
+  }else if(waitingGrade){
+    document.getElementById('attendanceMessage').textContent='Escuchando las exposiciones de '+waitingGrade.label+'. La votación se abrirá al finalizar el bloque.';
+  }else{
+    document.getElementById('attendanceMessage').textContent='Ya emitiste tu voto en los tres bloques. ¡Gracias por participar!';
+  }
+  if(lastVotedGrade){
+    const completed=votingStatus.find(grade=>grade.key===lastVotedGrade);
+    const completedLabel=completed?completed.label.replace(' de Secundaria',' Secundaria'):completed?completed.label:'';
+    const next=votingStatus.find(grade=>grade.key!==lastVotedGrade&&!voterVotes[grade.key]);
+    document.getElementById('completionMessage').textContent='¡Voto de '+completedLabel+' registrado! '+(next?'Prepárate para el bloque de '+next.label+'.':'Gracias por participar.');
+    document.getElementById('completionMessage').classList.remove('hidden');
+    lastVotedGrade=null;
+  }
+  votingStatus.forEach(grade=>{
+    const section=document.createElement('section');
+    section.className='border-t border-white/10 pt-5';
+    const heading=document.createElement('div');
+    heading.className='flex items-center justify-between gap-3';
+    const title=document.createElement('h2');
+    title.className='text-xl font-extrabold';
+    title.textContent=grade.label;
+    const state=document.createElement('span');
+    state.className='text-xs font-bold '+(voterVotes[grade.key]?'text-emerald-300':grade.open?'text-teal-300':'text-white/40');
+    state.textContent=voterVotes[grade.key]?'VOTO REGISTRADO':grade.open?'VOTACIÓN ABIERTA':'EN ESPERA';
+    heading.append(title,state);
+    section.append(heading);
+    if(voterVotes[grade.key]){
+      const text=document.createElement('p'); text.className='mt-3 text-sm text-white/55'; text.textContent='Tu voto para este grado ya fue registrado.'; section.append(text);
+    }else if(grade.open){
+      const cards=document.createElement('div'); cards.className='mt-4 grid gap-3 sm:grid-cols-2';
+      if(!grade.projects.length){const empty=document.createElement('p');empty.className='text-sm text-amber-200';empty.textContent='Aún no hay proyectos activos para este grado.';section.append(empty);}
+      grade.projects.forEach(project=>cards.append(createProjectCard(project,grade)));
+      if(grade.projects.length) section.append(cards);
+    }else{
+      const text=document.createElement('p'); text.className='mt-3 text-sm text-white/45'; text.textContent='La votación se abrirá al finalizar el bloque.'; section.append(text);
+    }
+    list.append(section);
+  });
+}
+function createProjectCard(project,grade){
+  const card=document.createElement('article'); card.className='overflow-hidden rounded-xl border border-white/10 bg-white/[0.04]';
+  if(project.photo){const image=document.createElement('img');image.src=project.photo;image.alt=project.title;image.loading='lazy';image.className='aspect-[16/9] w-full object-cover';card.append(image);}
+  const body=document.createElement('div');body.className='p-4';
+  const title=document.createElement('h3');title.className='font-extrabold';title.textContent=project.title;body.append(title);
+  if(project.team){const team=document.createElement('p');team.className='mt-1 text-sm text-white/55';team.textContent=project.team;body.append(team);}
+  const button=document.createElement('button');button.type='button';button.className='mt-4 w-full rounded-lg bg-teal-300 px-4 py-3 text-sm font-extrabold text-[#071114]';button.textContent='Confirmar Voto';
+  button.addEventListener('click',()=>confirmVote(button,grade,project));body.append(button);card.append(body);return card;
+}
+async function confirmVote(button,grade,project){
+  if(!window.confirm('¿Confirmas tu voto por “'+project.title+'” para '+grade.label+'? No podrás cambiarlo después.')) return;
+  button.disabled=true;button.textContent='Registrando...';
+  try{
+    const result=await post({action:'castVote',email:voterSession.email,dni:voterSession.dni,grade:grade.key,projectId:project.id});
+    if(result.status==='OK'){lastVotedGrade=grade.key;await refreshVoting();}
+    else if(result.status==='YA_VOTO'){await refreshVoting();}
+    else if(result.status==='CERRADA'){button.textContent='Votación cerrada';await refreshVoting();}
+    else{button.disabled=false;button.textContent='Confirmar Voto';window.alert(result.message||'No se pudo registrar el voto.');}
+  }catch(error){button.disabled=false;button.textContent='Confirmar Voto';window.alert('Error de conexión. Inténtalo nuevamente.');}
+}
+document.getElementById('loginForm').addEventListener('submit',async event=>{
+  event.preventDefault();const button=document.getElementById('loginButton');button.disabled=true;button.textContent='Verificando...';
+  try{await authenticate(document.getElementById('emailInput').value.trim().toLowerCase(),document.getElementById('dniInput').value.trim(),true);}
+  catch(error){message(loginMessage,'No se pudo conectar. Inténtalo nuevamente.','error');}
+  finally{button.disabled=false;button.textContent='Continuar';}
+});
+document.getElementById('forgetButton').addEventListener('click',()=>{
+  localStorage.removeItem(SESSION_KEY);if(refreshTimer)clearInterval(refreshTimer);location.reload();
+});
+window.addEventListener('load',async()=>{
+  const saved=localStorage.getItem(SESSION_KEY);
+  if(saved){try{const session=JSON.parse(saved);await authenticate(session.email,session.dni,false);return;}catch(error){localStorage.removeItem(SESSION_KEY);}}
+  document.getElementById('identityLabel').textContent='Acceso disponible para asistentes con ingreso validado.';
+});
+</script>
+</body>
+</html>

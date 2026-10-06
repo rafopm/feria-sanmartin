@@ -1,11 +1,21 @@
 const SHEET_NAME = 'Respuestas';
 const EVENTS_SHEET_NAME = 'Eventos';
+const PROJECTS_SHEET_NAME = 'Proyectos';
+const VOTES_SHEET_NAME = 'Votos';
 const PROP_KEY = 'LATEST_INGRESO_DISPLAY';
+const VOTING_GRADES = [
+  { key: '1', label: '1.° de Secundaria' },
+  { key: '2', label: '2.° de Secundaria' },
+  { key: '3', label: '3.° de Secundaria' }
+];
 const RESPONSE_HEADERS = ['Fecha', 'ID', 'Nombres', 'Apellidos', 'Parentesco', 'Estudiante', 'Grado', 'Email', 'DNI', 'Estado', 'Hora', 'Evento ID'];
+const PROJECT_HEADERS = ['Proyecto ID', 'Grado', 'Título', 'Equipo', 'Foto URL', 'Activo'];
+const VOTE_HEADERS = ['Fecha', 'Evento ID', 'Registro ID', 'Correo', 'Grado', 'Proyecto ID'];
 
 function doGet(e) {
   const action = e && e.parameter ? e.parameter.action : '';
   if (action === 'getEvents') return json({ events: getEvents() });
+  if (action === 'getVotingStatus') return json(getVotingStatus());
   if (action === 'checkEmail') {
     return json(checkEmail(e.parameter.email, e.parameter.eventoId));
   }
@@ -13,7 +23,8 @@ function doGet(e) {
   if (action === 'latest') return json(getLatestIngreso());
 
   const page = e && e.parameter ? e.parameter.page || 'Index' : 'Index';
-  const file = page.toLowerCase() === 'display' ? 'Display' : page.toLowerCase() === 'scanner' ? 'Scanner' : 'Index';
+  const pageName = page.toLowerCase();
+  const file = pageName === 'display' ? 'Display' : pageName === 'scanner' ? 'Scanner' : pageName === 'admin' ? 'Admin' : pageName === 'vote' ? 'Vote' : 'Index';
   try {
     return HtmlService.createHtmlOutputFromFile(file)
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
@@ -28,6 +39,10 @@ function doPost(e) {
     if (body.action === 'register') return json(registerAttendeeAPI(body));
     if (body.action === 'resend') return json(resendInvitation(body.email, body.eventoId));
     if (body.action === 'check') return json(checkInvitationById(body.id));
+    if (body.action === 'checkVoter') return json(checkVoter(body.email, body.dni));
+    if (body.action === 'castVote') return json(castVote(body));
+    if (body.action === 'adminCheck') return json(checkAdminPin(body.pin));
+    if (body.action === 'setVoting') return json(setVoting(body));
     return json({ status: 'ERROR', message: 'Accion no reconocida' });
   } catch (err) {
     return json({ status: 'ERROR', message: err.message });
@@ -133,6 +148,152 @@ function checkInvitationById(invitationId) {
   } finally {
     lock.releaseLock();
   }
+}
+
+function getVotingStatus() {
+  const properties = PropertiesService.getScriptProperties();
+  const activeEvent = getActiveEvent();
+  return {
+    grades: VOTING_GRADES.map(function (grade) {
+      return {
+        key: grade.key,
+        label: grade.label,
+        open: Boolean(activeEvent && properties.getProperty(votingStateKey(activeEvent.id, grade.key)) === 'true'),
+        projects: getProjectsForGrade(grade.key)
+      };
+    })
+  };
+}
+
+function checkVoter(email, dni) {
+  const attendee = findEligibleAttendee(email, dni);
+  if (!attendee) return { status: 'NO_AUTORIZADO' };
+  return { status: 'OK', voterId: attendee.id, votes: getVoterVotes(attendee.id, attendee.eventId) };
+}
+
+function castVote(data) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const gradeKey = String(data.grade || '');
+    const grade = VOTING_GRADES.find(function (item) { return item.key === gradeKey; });
+    if (!grade) return { status: 'ERROR', message: 'Grado no válido' };
+    const attendee = findEligibleAttendee(data.email, data.dni);
+    if (!attendee) return { status: 'NO_AUTORIZADO' };
+    if (PropertiesService.getScriptProperties().getProperty(votingStateKey(attendee.eventId, gradeKey)) !== 'true') {
+      return { status: 'CERRADA', message: 'La votación de este grado está cerrada' };
+    }
+
+    const projectId = String(data.projectId || '').trim();
+    const project = getProjectsForGrade(gradeKey).find(function (item) { return item.id === projectId; });
+    if (!project) return { status: 'PROYECTO_INVALIDO' };
+
+    const votesSheet = getVotingSheet();
+    const votes = votesSheet.getDataRange().getValues();
+    for (let row = 1; row < votes.length; row++) {
+      if (String(votes[row][1]) === attendee.eventId && String(votes[row][2]) === attendee.id && String(votes[row][4]) === gradeKey) {
+        return { status: 'YA_VOTO' };
+      }
+    }
+    votesSheet.appendRow([new Date(), attendee.eventId, attendee.id, attendee.email, gradeKey, projectId]);
+    return { status: 'OK', grade: grade.label };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function setVoting(data) {
+  if (!checkAdminPin(data.pin).authorized) return { status: 'NO_AUTORIZADO' };
+
+  const gradeKey = String(data.grade || '');
+  if (!VOTING_GRADES.some(function (grade) { return grade.key === gradeKey; })) return { status: 'ERROR', message: 'Grado no válido' };
+  const activeEvent = getActiveEvent();
+  if (!activeEvent) return { status: 'EVENTO_INACTIVO', message: 'No hay un evento activo' };
+  const open = data.open === true;
+  PropertiesService.getScriptProperties().setProperty(votingStateKey(activeEvent.id, gradeKey), open ? 'true' : 'false');
+  return { status: 'OK', grade: gradeKey, open: open };
+}
+
+function votingStateKey(eventId, gradeKey) {
+  return 'VOTING_OPEN_' + encodeURIComponent(String(eventId)) + '_' + gradeKey;
+}
+
+function checkAdminPin(pin) {
+  const expectedPin = PropertiesService.getScriptProperties().getProperty('VOTING_ADMIN_PIN');
+  return { authorized: Boolean(expectedPin) && String(pin || '') === expectedPin };
+}
+
+function findEligibleAttendee(email, dni) {
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+  const normalizedDni = String(dni || '').trim();
+  const activeEvent = getActiveEvent();
+  if (!normalizedEmail || !/^\d{8}$/.test(normalizedDni) || !activeEvent) return null;
+
+  const values = getResponsesSheet().getDataRange().getValues();
+  for (let row = 1; row < values.length; row++) {
+    const record = values[row];
+    if (String(record[7] || '').trim().toLowerCase() !== normalizedEmail || String(record[8] || '').trim() !== normalizedDni) continue;
+    if (String(record[11] || '').trim() !== String(activeEvent.id).trim() || String(record[9] || '').trim().toUpperCase() !== 'INGRESADO') continue;
+    return { id: String(record[1]), email: normalizedEmail, eventId: String(activeEvent.id) };
+  }
+  return null;
+}
+
+function getVoterVotes(attendeeId, eventId) {
+  const votes = getVotingSheet().getDataRange().getValues();
+  const result = {};
+  for (let row = 1; row < votes.length; row++) {
+    if (String(votes[row][1]) === String(eventId) && String(votes[row][2]) === String(attendeeId)) {
+      result[String(votes[row][4])] = String(votes[row][5]);
+    }
+  }
+  return result;
+}
+
+function getProjectsForGrade(gradeKey) {
+  const values = getProjectsSheet().getDataRange().getValues();
+  if (values.length < 2) return [];
+  const headers = values[0].map(normalizeHeader);
+  return values.slice(1).map(function (row) {
+    const active = cell(row, headers, ['activo', 'estado']);
+    const projectGrade = normalizeGrade(cell(row, headers, ['grado', 'gradoseccion']));
+    return {
+      id: String(cell(row, headers, ['proyectoid', 'id', 'codigo']) || '').trim(),
+      grade: projectGrade,
+      title: String(cell(row, headers, ['titulo', 'proyecto', 'nombre']) || '').trim(),
+      team: String(cell(row, headers, ['equipo', 'integrantes']) || '').trim(),
+      photo: String(cell(row, headers, ['fotourl', 'foto', 'imagen', 'urlfoto']) || '').trim(),
+      active: active === '' || isActive(active)
+    };
+  }).filter(function (project) {
+    return project.id && project.title && project.grade === gradeKey && project.active;
+  });
+}
+
+function normalizeGrade(value) {
+  const normalized = String(value || '').toLowerCase().replace(/[°º.]/g, '').trim();
+  const match = normalized.match(/[123]/);
+  if (match) return match[0];
+  if (normalized.indexOf('primero') >= 0 || normalized.indexOf('primer') >= 0) return '1';
+  if (normalized.indexOf('segundo') >= 0) return '2';
+  if (normalized.indexOf('tercero') >= 0 || normalized.indexOf('tercer') >= 0) return '3';
+  return '';
+}
+
+function getProjectsSheet() {
+  return getOrCreateSheet(PROJECTS_SHEET_NAME, PROJECT_HEADERS);
+}
+
+function getVotingSheet() {
+  return getOrCreateSheet(VOTES_SHEET_NAME, VOTE_HEADERS);
+}
+
+function getOrCreateSheet(name, headers) {
+  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = spreadsheet.getSheetByName(name);
+  if (!sheet) sheet = spreadsheet.insertSheet(name);
+  if (sheet.getLastRow() === 0) sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+  return sheet;
 }
 
 function getLatestIngreso() {
@@ -244,6 +405,7 @@ function buildInvitationId(sheet) {
 
 function sendInvitationEmail(email, nombres, apellidos, parentesco, estudiante, grado, dni, id, qrUrl) {
   const safe = [email, nombres, apellidos, parentesco, estudiante, grado, dni, id].map(escapeHtml);
+  const votingUrl = ScriptApp.getService().getUrl() + '?page=vote';
   const htmlBody = '<div style="font-family:Arial">' +
     '<h2>Invitacion ' + safe[7] + '</h2>' +
     '<p>' + safe[1] + ' ' + safe[2] + '</p>' +
@@ -251,6 +413,7 @@ function sendInvitationEmail(email, nombres, apellidos, parentesco, estudiante, 
     '<p>Grado: ' + safe[5] + '</p>' +
     '<p>DNI: ' + safe[6] + '</p>' +
     '<p>Para ingresar debe presentar este codigo QR y su DNI fisico.</p>' +
+    '<p>El dia de la feria, despues de validar tu ingreso, podras votar desde tu celular: <a href="' + escapeHtml(votingUrl) + '">abrir votacion</a>.</p>' +
     '<img src="' + qrUrl + '"/></div>';
   const qrResponse = UrlFetchApp.fetch(qrUrl, { muteHttpExceptions: true });
   if (qrResponse.getResponseCode() !== 200) {

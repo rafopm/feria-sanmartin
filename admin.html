@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Panel de votación</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="config.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&display=swap" rel="stylesheet">
+<style>body{font-family:'Plus Jakarta Sans',sans-serif}</style>
+</head>
+<body class="min-h-screen bg-[#10130c] text-white p-4 sm:p-8">
+  <main class="mx-auto max-w-3xl">
+    <header class="border-b border-white/10 pb-5">
+      <p class="text-xs font-bold uppercase tracking-widest text-lime-300">Feria escolar · San Martín</p>
+      <h1 class="mt-2 text-3xl font-extrabold">Control de votaciones</h1>
+      <p class="mt-2 text-sm text-white/55">Abre o cierra cada bloque desde el escenario.</p>
+    </header>
+    <section id="pinPanel" class="mt-6 max-w-md">
+      <form id="pinForm" class="grid gap-3">
+        <label class="grid gap-2 text-sm text-white/70">PIN de administrador
+          <input id="pinInput" type="password" required autocomplete="current-password" class="rounded-xl border border-white/15 bg-white/[0.06] px-4 py-3 text-white outline-none focus:border-lime-300" />
+        </label>
+        <button class="rounded-xl bg-lime-300 px-5 py-3 font-extrabold text-[#10130c]">Acceder al panel</button>
+        <p id="pinMessage" class="hidden rounded-xl border px-4 py-3 text-sm"></p>
+      </form>
+    </section>
+    <section id="controls" class="hidden mt-6">
+      <div id="connectionState" class="mb-4 text-sm text-white/45">Cargando estado...</div>
+      <div id="gradeControls" class="divide-y divide-white/10 border-y border-white/10"></div>
+      <button id="logoutButton" class="mt-6 text-sm text-white/45 underline">Cerrar panel</button>
+      <p id="actionMessage" class="hidden mt-4 rounded-xl border px-4 py-3 text-sm"></p>
+    </section>
+  </main>
+<script>
+const PIN_KEY='feria_admin_pin';
+let adminPin='';
+let grades=[];
+let statusTimer=null;
+async function post(payload){
+  const response=await fetch(API_BASE,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)});
+  return response.json();
+}
+function showMessage(element,text,error){
+  element.className='mt-4 rounded-xl border px-4 py-3 text-sm '+(error?'border-red-300/20 bg-red-300/10 text-red-100':'border-lime-300/20 bg-lime-300/10 text-lime-100');
+  element.textContent=text;
+}
+async function loadStatus(){
+  try{
+    const response=await fetch(API_BASE+'?action=getVotingStatus&t='+Date.now(),{cache:'no-store'});
+    const data=await response.json();grades=data.grades||[];renderControls();
+    document.getElementById('connectionState').textContent='Conectado · estado actualizado '+new Date().toLocaleTimeString('es-PE');
+  }catch(error){document.getElementById('connectionState').textContent='Sin conexión. Reintentando...';}
+}
+function renderControls(){
+  const container=document.getElementById('gradeControls');container.replaceChildren();
+  grades.forEach(grade=>{
+    const row=document.createElement('article');row.className='flex flex-col gap-4 py-5 sm:flex-row sm:items-center sm:justify-between';
+    const info=document.createElement('div');
+    const title=document.createElement('h2');title.className='font-extrabold';title.textContent=grade.label;
+    const state=document.createElement('p');state.className='mt-1 text-sm '+(grade.open?'text-lime-300':'text-white/45');state.textContent=grade.open?'Votación abierta':'Votación cerrada';
+    info.append(title,state);
+    const button=document.createElement('button');button.type='button';button.className='min-w-52 rounded-lg px-4 py-3 text-sm font-extrabold '+(grade.open?'border border-white/15 bg-white/[0.06] text-white':'bg-lime-300 text-[#10130c]');button.textContent=grade.open?'Cerrar Votación '+grade.key+'° Sec':'Activar Votación '+grade.key+'° Sec';
+    button.addEventListener('click',()=>toggleGrade(grade,button));row.append(info,button);container.append(row);
+  });
+}
+async function toggleGrade(grade,button){
+  button.disabled=true;
+  try{
+    const result=await post({action:'setVoting',pin:adminPin,grade:grade.key,open:!grade.open});
+    if(result.status==='OK'){
+      grade.open=result.open;renderControls();
+      showMessage(document.getElementById('actionMessage'),grade.label+': votación '+(grade.open?'activada':'cerrada')+'.',false);
+    }else if(result.status==='NO_AUTORIZADO'){
+      sessionStorage.removeItem(PIN_KEY);adminPin='';document.getElementById('controls').classList.add('hidden');document.getElementById('pinPanel').classList.remove('hidden');showMessage(document.getElementById('pinMessage'),'PIN no válido o no configurado en el servidor.',true);
+    }else{showMessage(document.getElementById('actionMessage'),result.message||'No se pudo actualizar el bloque.',true);}
+  }catch(error){showMessage(document.getElementById('actionMessage'),'Error de conexión al cambiar el bloque.',true);}
+  finally{button.disabled=false;}
+}
+async function enterPanel(pin){
+  const result=await post({action:'adminCheck',pin:pin});
+  if(!result.authorized){
+    showMessage(document.getElementById('pinMessage'),'PIN no válido. Verifica el PIN configurado en las propiedades del script.',true);return false;
+  }
+  adminPin=pin;sessionStorage.setItem(PIN_KEY,pin);
+  document.getElementById('pinPanel').classList.add('hidden');document.getElementById('controls').classList.remove('hidden');
+  await loadStatus();return true;
+}
+document.getElementById('pinForm').addEventListener('submit',async event=>{
+  event.preventDefault();const button=event.currentTarget.querySelector('button');button.disabled=true;
+  try{await loadStatus();await enterPanel(document.getElementById('pinInput').value);}
+  catch(error){showMessage(document.getElementById('pinMessage'),'No se pudo conectar con el servidor.',true);}
+  finally{button.disabled=false;}
+});
+document.getElementById('logoutButton').addEventListener('click',()=>{
+  sessionStorage.removeItem(PIN_KEY);adminPin='';if(statusTimer)clearInterval(statusTimer);location.reload();
+});
+window.addEventListener('load',async()=>{
+  await loadStatus();
+  const saved=sessionStorage.getItem(PIN_KEY);
+  if(saved) await enterPanel(saved);
+  statusTimer=setInterval(loadStatus,5000);
+});
+</script>
+</body>
+</html>
