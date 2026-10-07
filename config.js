@@ -1,2 +1,2 @@
 // Cambia solo aquí cuando despliegues nuevo exec
-const API_BASE = "https://script.google.com/macros/s/AKfycbwANRawIoWO6bwoGGEZeFxmG9tr-sTTHd6v0EbcmLqmnQmIz3jPtd5_zpS1OIaT1CDG3A/exec";
+const API_BASE = "https://script.google.com/macros/s/AKfycbybTCgLz7LM-1Zdx9n4CWdFqs7S3jGfFtCYm6XFlEHDtWtJKBsdLLMebjMMib7OPLi0lw/exec";
